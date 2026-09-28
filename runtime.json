@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "backend": "django",
+  "frontend": "static",
+  "mcp": true,
+  "bootstrap": "django_admin"
+}

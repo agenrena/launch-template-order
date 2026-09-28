@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+node_modules/
+**/dist/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+.DS_Store
+coverage/
+*.log
+.runtime/
+compose.override.yaml
+.preview-*
+.ruff_cache/

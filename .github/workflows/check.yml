@@ -1,0 +1,48 @@
+name: Check template
+on: [push, pull_request]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: order
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: order
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U order -d order'
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      SECRET_KEY: ci-only-not-a-deployment-secret-key
+      DATABASE_URL: postgresql://order:test-only@localhost:5432/order
+      COOKIE_SECURE: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: pip install -r backend/requirements.txt
+      - run: python backend/manage.py makemigrations --check --dry-run
+      - run: python backend/manage.py test core.tests ordering.tests --noinput
+  frontend-and-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
+      - run: npm ci --prefix mcp
+      - run: npm test --prefix mcp
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/setup.py
+      - run: docker compose up --build -d --wait --wait-timeout 180
+      - run: curl --fail --retry 10 --retry-delay 3 --retry-all-errors http://localhost:8084/health/
+      - if: failure()
+        run: docker compose logs
+      - if: always()
+        run: docker compose down -v
