@@ -1,0 +1,51 @@
+name: Publish Order to S3
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+concurrency:
+  group: order-template-publish
+  cancel-in-progress: false
+jobs:
+  checks:
+    if: ${{ !github.event.release.draft && !github.event.release.prerelease }}
+    uses: ./.github/workflows/check.yml
+    with:
+      release_tag: ${{ github.event.release.tag_name }}
+  publish:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: template-publish
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TEMPLATE_BUCKET: ${{ vars.LAUNCH_TEMPLATE_BUCKET }}
+      CATALOG_KEY: catalog.json
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.checks.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r scripts/requirements-publish.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: order-template
+          path: release-dist/
+      - name: Check publish configuration
+        env:
+          PUBLISH_ROLE: ${{ vars.AWS_TEMPLATE_PUBLISH_ROLE_ARN }}
+        run: |
+          test -n "$TEMPLATE_BUCKET"
+          test -n "$PUBLISH_ROLE"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
+        with:
+          role-to-assume: ${{ vars.AWS_TEMPLATE_PUBLISH_ROLE_ARN }}
+          role-session-name: order-template-publish
+          aws-region: ap-northeast-1
+      - run: python scripts/publish_template.py publish --bucket "$TEMPLATE_BUCKET" --catalog-key "$CATALOG_KEY"
