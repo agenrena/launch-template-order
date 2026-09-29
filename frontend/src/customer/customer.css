@@ -1,18 +1,11 @@
-/* Customer pages: one column, thumb-sized targets, readable at arm's length. */
+/* Customer pages: one column, thumb-sized targets, readable at arm's length.
+   Colours and radii come from theme.css, so the store's brand and dark mode apply here too. */
 .customer {
-  --ink: #1f2d29;
-  --muted: #5f6f69;
-  --line: #e4e8e1;
-  --paper: #ffffff;
-  --wash: #f6f7f3;
-  --brand: #285644;
-  --warn-bg: #fff5e6;
-  --warn-ink: #7a4a0c;
   min-height: 100vh;
   max-width: 560px;
   margin: 0 auto;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--surface);
+  color: var(--text);
 }
 .customer h1 {
   font-size: 1.6rem;
@@ -24,7 +17,7 @@
 }
 .c-header {
   padding: 1.25rem 1rem 0.75rem;
-  background: var(--wash);
+  background: var(--bg);
   display: grid;
   gap: 0.5rem;
 }
@@ -52,41 +45,42 @@
   border-radius: 999px;
   padding: 0.25rem 0.7rem;
   font-size: 0.78rem;
-  background: var(--wash);
-  border: 1px solid var(--line);
+  background: var(--bg);
+  border: 1px solid var(--border);
 }
 .c-pending {
-  background: var(--warn-bg);
-  color: var(--warn-ink);
-  border-color: #f3dcb4;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: var(--accent-soft);
 }
 .c-confirmed,
 .c-completed {
-  background: #e8f4ec;
-  color: #1d5b37;
-  border-color: #cfe6d7;
+  background: var(--ok-soft);
+  color: var(--ok);
+  border-color: var(--ok-soft);
 }
 .c-rejected,
 .c-cancelled {
-  background: #fbecea;
-  color: #8a2f25;
-  border-color: #f1d2cd;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger-soft);
 }
 .c-warn,
 .c-info {
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   padding: 0.6rem 0.8rem;
   font-size: 0.92rem;
   display: grid;
   gap: 0.2rem;
 }
+/* Closed or paused: the customer cannot order right now. */
 .c-warn {
-  background: var(--warn-bg);
-  color: var(--warn-ink);
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 .c-info {
-  background: #eef4f1;
-  color: var(--brand);
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 .c-note {
   color: var(--muted);
@@ -113,10 +107,10 @@
   list-style: none;
   margin: 0.4rem 0 0;
   padding: 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
 }
 .c-category li {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .c-item {
   all: unset;
@@ -161,10 +155,10 @@
   gap: 1rem;
   width: 100%;
   min-height: 3.25rem;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 0;
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-fg);
   padding: 0 1.1rem;
   font-weight: 600;
   text-decoration: none;
@@ -178,7 +172,7 @@
   opacity: 0.45;
 }
 .c-link {
-  color: var(--brand);
+  color: var(--accent-text);
   font-weight: 600;
   min-height: 2.75rem;
   display: inline-flex;
@@ -188,9 +182,9 @@
   display: grid;
   gap: 0.25rem;
   padding: 1rem;
-  border-radius: 14px;
-  background: #eef4f1;
-  color: var(--brand);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: var(--accent-text);
   text-decoration: none;
 }
 .c-bar {
@@ -201,13 +195,13 @@
   max-width: 560px;
   margin: 0 auto;
   padding: 0.9rem 1rem max(0.9rem, env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.96);
-  border-top: 1px solid var(--line);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
 }
 .c-sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20, 30, 26, 0.35);
+  background: var(--backdrop);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -218,8 +212,8 @@
   max-width: 560px;
   max-height: 88vh;
   overflow-y: auto;
-  background: var(--paper);
-  border-radius: 18px 18px 0 0;
+  background: var(--surface);
+  border-radius: calc(var(--radius-lg) * 1.5) calc(var(--radius-lg) * 1.5) 0 0;
   padding: 1rem 1rem max(1rem, env(safe-area-inset-bottom));
   display: grid;
   gap: 0.9rem;
@@ -243,8 +237,8 @@
 }
 .c-field input {
   min-height: 3rem;
-  border: 1px solid #d6ddd5;
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 0 0.9rem;
   font-size: 1rem;
 }
@@ -286,11 +280,11 @@
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
   padding-top: 0.75rem;
 }
 .c-progress {
-  border-radius: 18px;
+  border-radius: calc(var(--radius-lg) * 1.5);
   padding: 1.1rem;
   display: grid;
   gap: 0.5rem;
@@ -306,8 +300,8 @@
   overflow-wrap: anywhere;
 }
 .c-card {
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-lg) * 1.5);
   padding: 1rem;
   display: grid;
   gap: 0.75rem;
@@ -324,8 +318,8 @@
 }
 
 .c-group {
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 0.6rem 0.9rem 0.4rem;
   margin: 0;
 }

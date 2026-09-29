@@ -1,48 +1,80 @@
-name: Check template
-on: [push, pull_request]
+name: Check Order
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+    inputs:
+      release_tag:
+        type: string
+        default: ''
+    outputs:
+      commit:
+        value: ${{ jobs.check.outputs.commit }}
+permissions:
+  contents: read
 jobs:
-  backend:
+  check:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      commit: ${{ steps.revision.outputs.commit }}
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:17
         env:
-          POSTGRES_USER: order
-          POSTGRES_PASSWORD: test-only
-          POSTGRES_DB: order
+          POSTGRES_DB: order_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-password
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U order -d order'
-          --health-interval 5s --health-timeout 3s --health-retries 20
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
     env:
-      SECRET_KEY: ci-only-not-a-deployment-secret-key
-      DATABASE_URL: postgresql://order:test-only@localhost:5432/order
+      SECRET_KEY: ci-only-secret-not-used-outside-disposable-tests
+      DATABASE_URL: postgresql://postgres:ci-only-password@127.0.0.1:5432/order_ci
       COOKIE_SECURE: 'false'
+      AGENRENA_VENDOR_ID: ''
+      AGENRENA_VENDOR_SECRET: ''
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.13' }
-      - run: pip install -r backend/requirements.txt
-      - run: python backend/manage.py makemigrations --check --dry-run
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
+          persist-credentials: false
+      - id: revision
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            mcp/package-lock.json
+      - run: python -m pip install -r backend/requirements.txt -r scripts/requirements-publish.txt
+      - run: python -m unittest discover -s scripts -p 'test_publish_template.py' -v
       - run: python backend/manage.py test core.tests ordering.tests --noinput
-  frontend-and-mcp:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - run: python backend/manage.py makemigrations --check --dry-run
       - run: npm ci --prefix frontend
       - run: npm run build --prefix frontend
       - run: npm ci --prefix mcp
       - run: npm test --prefix mcp
-  images:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 scripts/setup.py
-      - run: docker compose up --build -d --wait --wait-timeout 180
-      - run: curl --fail --retry 10 --retry-delay 3 --retry-all-errors http://localhost:8084/health/
-      - if: failure()
-        run: docker compose logs
-      - if: always()
-        run: docker compose down -v
+      - if: inputs.release_tag != ''
+        run: |
+          docker build -f backend/Dockerfile -t order-backend-check .
+          docker build -f frontend/Dockerfile -t order-frontend-check .
+          docker build -f mcp/Dockerfile -t order-mcp-check .
+      - if: inputs.release_tag != ''
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+        run: python scripts/publish_template.py pack --version "$RELEASE_TAG" --repository "$SOURCE_REPOSITORY"
+      - if: inputs.release_tag != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: order-template
+          path: release-dist/
+          if-no-files-found: error
+          retention-days: 7

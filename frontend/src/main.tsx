@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { client } from "./api";
 import { App } from "./App";
 import { DraftPage, MenuPage, StatusPage } from "./customer/Customer";
+import "./theme.css";
 import "./style.css";
 import "./customer/customer.css";
 

@@ -1,0 +1,70 @@
+/*
+ * 主題：這個 App 所有顏色、字體、圓角與密度都在這裡。
+ * 換品牌色只改 --brand（按鈕文字看不清楚時再改 --brand-fg）。
+ * style.css 只能使用這裡的變數，不寫色碼；`npm run check:style` 會檢查。
+ */
+:root {
+  /* ---- 品牌：商家通常只改這一段 ---- */
+  --brand: #8a5021;
+  --brand-fg: #ffffff;
+  --font: Inter, system-ui, -apple-system, "PingFang TC", "Noto Sans TC",
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --text-size: 15px;
+  --row: 46px;
+
+  /* ---- 中性色（亮色） ---- */
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --sidebar: #fbfbfd;
+  --border: #e3e3e8;
+  --border-soft: #efeff4;
+  --text: #0d0d14;
+  --muted: #64646f;
+  --faint: #9ca3af;
+
+  /* ---- 狀態色：固定，不跟品牌走 ---- */
+  --ok: #1f8a4c;
+  --ok-soft: #e7f5ec;
+  --danger: #b42318;
+  --danger-soft: #fef1f0;
+
+  /* ---- 由 --brand 算出，不需要改 ---- */
+  --accent-soft: color-mix(in srgb, var(--brand) 10%, var(--surface));
+  --accent-text: color-mix(in srgb, var(--brand) 88%, #000000);
+  --accent-hover: color-mix(in srgb, var(--brand) 86%, #000000);
+  --focus: color-mix(in srgb, var(--brand) 55%, var(--surface));
+  --shadow-lg: 0 20px 60px rgb(0 0 0 / 0.18);
+  --backdrop: rgb(0 0 0 / 0.4);
+
+  color-scheme: light;
+}
+
+/* 暗色模式跟隨系統設定；不需要時刪掉這一段即可。 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0b0f;
+    --surface: #1c1c24;
+    --sidebar: #111116;
+    --border: #2c2c36;
+    --border-soft: #25252e;
+    --text: #f5f5f7;
+    --muted: #a1a1aa;
+    --faint: #6b7280;
+
+    --ok: #4ade80;
+    --ok-soft: #11281a;
+    --danger: #f97066;
+    --danger-soft: #2d1414;
+
+    --accent-soft: color-mix(in srgb, var(--brand) 24%, var(--surface));
+    --accent-text: color-mix(in srgb, var(--brand) 55%, #ffffff);
+    --accent-hover: color-mix(in srgb, var(--brand) 85%, #ffffff);
+    --shadow-lg: 0 20px 60px rgb(0 0 0 / 0.5);
+    --backdrop: rgb(0 0 0 / 0.6);
+
+    color-scheme: dark;
+  }
+}

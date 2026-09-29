@@ -39,7 +39,7 @@ export function AgenrenaPanel({
         </div>
         {owner && configured && (
           <button
-            className={connected ? "quiet" : ""}
+            className={connected ? "quiet" : "primary"}
             disabled={action.busy}
             onClick={() => {
               if (!connected) setConnecting(true);

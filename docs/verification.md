@@ -1,5 +1,21 @@
 # 驗證紀錄
 
+## 2026-09-30：樣式集中於 theme.css、發布流程
+
+同步 business_core 的樣式重構（theme.css、check:style、側欄圖示）與發布流程；刻意不同步本機執行，order 只在伺服器上執行。Agenrena 未設定。
+
+| 檢查 | 結果 |
+|---|---|
+| Django / PostgreSQL | 71 項測試通過（後端未修改） |
+| Frontend | 正式建置通過；check:style：後台 style.css 與顧客頁 customer.css 都沒有 theme.css 以外的色碼（原本約 100 處，含顧客頁自己定義的綠色 `--brand`） |
+| MCP | 10 項測試通過 |
+| 發布 | 發布腳本 14 項測試通過；workflow YAML 可解析；在臨時 repo 實際 `pack`：ZIP 約 190 KB、105 個檔案，不含 node_modules、建置結果、.github 或 .env（只有 .env.example） |
+| Docker Compose 與畫面 | 乾淨副本 `docker compose up --build`，加入菜單、選項、全天營業時間與桌位 A1。Chrome 截圖：手機 QR 內用點餐（選項、購物車、送出、訂單進度）亮色與暗色；後台訂單（待確認用品牌淺底）亮色與暗色 |
+| 換品牌 | 測試副本只改 `theme.css` 的 `--brand` 成藍色並重建前端 image：顧客頁的連結與按鈕、後台側欄、按鈕與待確認標籤全部變藍 |
+| 程式整理 | Prettier（修改過的檔案） |
+
+尚未執行：Agent 確認連結頁（/d/）的畫面、與真實 Agenrena 的授權與通知。
+
 ## 2026-09-29：第二階段（單層選項、暫停接單、今日營收）
 
 同樣在 scratchpad 的獨立 venv 與臨時 PostgreSQL 14 叢集執行，Agenrena 以模擬的 HTTP 回應代替。

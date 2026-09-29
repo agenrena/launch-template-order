@@ -30,8 +30,8 @@ export async function api<T>(
   }
   return body as T;
 }
-export function useData<T>(path: string) {
-  return useQuery({ queryKey: [path], queryFn: () => api<T>(path) });
+export function useData<T>(path: string, enabled = true) {
+  return useQuery({ queryKey: [path], queryFn: () => api<T>(path), enabled });
 }
 export async function change<T>(path: string, method: string, data?: unknown) {
   const result = await api<T>(path, method, data);

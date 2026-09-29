@@ -11,7 +11,6 @@ export function Members() {
   return (
     <>
       <Heading
-        eyebrow="TEAM"
         title="團隊成員"
         description="擁有者管理成員與 Agent 授權；管理員維護商家資料。"
       >
@@ -40,7 +39,9 @@ export function Members() {
                 </td>
                 <td>{roleName(u.role)}</td>
                 <td>
-                  <span className="badge">{u.is_active ? "啟用" : "停用"}</span>
+                  <span className={u.is_active ? "badge ok" : "badge"}>
+                    {u.is_active ? "啟用" : "停用"}
+                  </span>
                 </td>
                 <td>
                   <button onClick={() => setEditing(u)}>編輯</button>

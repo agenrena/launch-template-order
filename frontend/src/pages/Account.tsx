@@ -11,7 +11,6 @@ export function Account({ user }: { user: User }) {
   return (
     <>
       <Heading
-        eyebrow="ACCOUNT"
         title="我的帳號"
         description={`${user.username} · ${roleName(user.role)}`}
       />

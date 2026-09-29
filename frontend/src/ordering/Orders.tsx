@@ -66,7 +66,6 @@ export function Orders({ timezone }: { timezone: string }) {
   return (
     <>
       <Heading
-        eyebrow="SERVICE"
         title="訂單"
         description="QR 點餐、Agent 確認連結與店員代改的訂單都在這裡。有問題先聯絡顧客，談妥後再修改。"
       >

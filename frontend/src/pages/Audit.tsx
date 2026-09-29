@@ -56,11 +56,9 @@ export function AuditPage({ timezone }: { timezone: string }) {
   return (
     <>
       <Heading
-        eyebrow="ACTIVITY"
         title="操作紀錄"
-        description="查看成員的變更，以及 Agent 代表顧客執行的操作。"
+        description={`查看成員的變更，以及 Agent 代表顧客執行的操作。時間以 ${timezone} 顯示。`}
       />
-      <p className="muted">時間以 {timezone} 顯示</p>
       <Alert message={rows.error?.message} />
       {rows.isPending && <p>載入中…</p>}
       <section className="panel table-wrap">

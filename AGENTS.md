@@ -23,3 +23,5 @@ Do not modify /Users/fanchengkai/Documents/order (the source project) or the Run
 - Fresh-install schema only; initial migrations may be rewritten while there is no data.
 - Validate with PostgreSQL tests core.tests + ordering.tests, makemigrations --check, frontend build, MCP tests and scripts/http_smoke.py for integration changes.
 - No .env, credentials, production/customer data, virtualenvs or node_modules in deliveries.
+- Hosted only: customers open the App's own pages (table QR, Agent confirmation links), so it needs a public HTTPS URL. Do not add the local (start.command/SQLite) route from business_core unless requested.
+- Styling: every colour, font, radius and density value lives in frontend/src/theme.css (identical to business_core's). To rebrand, change --brand (and --brand-fg if button text is unreadable); the console and the customer pages both follow it. style.css, customer/customer.css and components use only var(--…); `npm run check:style` (also part of build) rejects colour literals elsewhere. Status colours (--ok, --danger) stay independent of the brand. Dark mode follows the system via the media block in theme.css.

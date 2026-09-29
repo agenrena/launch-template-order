@@ -8,6 +8,7 @@ import { Members } from "./pages/Members";
 import { Agents } from "./pages/Agents";
 import { AuditPage } from "./pages/Audit";
 import { Account } from "./pages/Account";
+import { Icon } from "./icons";
 import { Orders } from "./ordering/Orders";
 import { MenuAdmin } from "./ordering/MenuAdmin";
 import { Setup } from "./ordering/Setup";
@@ -30,7 +31,7 @@ export function App() {
       <div className="login-shell">
         <aside className="login-story">
           <div className="wordmark">
-            agenrena <span>ORDER</span>
+            agenrena<span>ORDER</span>
           </div>
           <div>
             <p className="eyebrow">YOUR BUSINESS, YOUR WAY</p>
@@ -102,19 +103,19 @@ function Console({ user }: { user: User }) {
     if (!owner && ["members", "agents"].includes(tab)) setTab("overview");
   }, [owner, tab]);
   const nav = [
-    ["orders", "訂單", "◉"],
-    ["menu", "菜單", "▦"],
-    ["setup", "桌位與營業", "⌖"],
-    ["overview", "總覽", "◈"],
-    ["business", "商家資料", "▤"],
+    ["orders", "訂單"],
+    ["menu", "菜單"],
+    ["setup", "桌位與營業"],
+    ["overview", "總覽"],
+    ["business", "商家資料"],
     ...(owner
       ? [
-          ["members", "團隊成員", "◎"],
-          ["agents", "Agent 連接", "◇"],
+          ["members", "團隊成員"],
+          ["agents", "Agent 連接"],
         ]
       : []),
-    ["audit", "操作紀錄", "≡"],
-    ["account", "我的帳號", "○"],
+    ["audit", "操作紀錄"],
+    ["account", "我的帳號"],
   ];
   return (
     <div className="shell">
@@ -123,9 +124,7 @@ function Console({ user }: { user: User }) {
           agenrena<span>ORDER</span>
         </div>
         <div className="workspace">
-          <span className="workspace-icon">
-            {(business.data?.name ?? "商")[0]}
-          </span>
+          <span className="tile">{(business.data?.name || "商")[0]}</span>
           <div>
             <strong>{business.data?.name ?? "商家工作空間"}</strong>
             <small>獨立商家 App</small>
@@ -133,13 +132,13 @@ function Console({ user }: { user: User }) {
         </div>
         <p className="nav-label">工作空間</p>
         <nav>
-          {nav.map(([key, label, icon]) => (
+          {nav.map(([key, label]) => (
             <button
               key={key}
               aria-current={tab === key ? "page" : undefined}
               onClick={() => setTab(key)}
             >
-              <span aria-hidden>{icon}</span>
+              <Icon name={key} />
               {label}
             </button>
           ))}
@@ -168,21 +167,14 @@ function Console({ user }: { user: User }) {
       <div className="main">
         <header className="topbar">
           <span>
-            工作空間 <span className="muted"> / </span>{" "}
-            {nav.find((n) => n[0] === tab)?.[1]}
+            工作空間 / <strong>{nav.find((n) => n[0] === tab)?.[1]}</strong>
           </span>
-          <span className="badge">{roleName(user.role)}</span>
+          <span className="badge brand">{roleName(user.role)}</span>
         </header>
         <main className="content">
           <Alert message={action.error || business.error?.message} />
           {tab === "overview" ? (
             <Overview business={business.data} go={setTab} owner={owner} />
-          ) : tab === "orders" ? (
-            <Orders timezone={business.data?.timezone ?? "Asia/Taipei"} />
-          ) : tab === "menu" ? (
-            <MenuAdmin />
-          ) : tab === "setup" ? (
-            <Setup />
           ) : tab === "business" ? (
             business.data && (
               <BusinessPage business={business.data} owner={owner} />
@@ -195,6 +187,12 @@ function Console({ user }: { user: User }) {
             <AuditPage timezone={business.data?.timezone ?? "Asia/Taipei"} />
           ) : tab === "account" ? (
             <Account user={user} />
+          ) : tab === "orders" ? (
+            <Orders timezone={business.data?.timezone ?? "Asia/Taipei"} />
+          ) : tab === "menu" ? (
+            <MenuAdmin />
+          ) : tab === "setup" ? (
+            <Setup />
           ) : null}
         </main>
         <footer>

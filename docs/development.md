@@ -56,6 +56,7 @@ Role/Permission 是具體權限表，不是通用規則引擎。沒有分店結�
 - 三組 API：`ordering/views.py`（`/api/web/` 公開、`/api/console/` 後台、`/api/agent-api/` Agent），回應格式在 `ordering/payloads.py`。
 - 通知：`ordering/notifications.py`。新增事件時沿用 `announce`，讓 `client_message_id` 對同一事實穩定。
 - 前端：顧客頁 `frontend/src/customer/`（不登入、手機優先）；後台 `frontend/src/ordering/`。
+- 更換外觀：只改 `frontend/src/theme.css`。換品牌色改 `--brand`（淺色品牌色時把 `--brand-fg` 改成深色），後台與顧客點餐頁的按鈕、淺底、連結都會跟著變；暗色模式在同檔的 `prefers-color-scheme` 區塊。`style.css`、`customer/customer.css` 與元件只能用 `var(--…)`，`npm run check:style`（build 也會跑）會擋下寫死的顏色。顧客頁較大的圓角由 `--radius-lg` 算出。訂單狀態：待確認用品牌淺底、完成用 `--ok`、拒單／打烊用 `--danger`。
 - MCP：`mcp/src/server.ts`；工具描述就是 Agent 的說明書，行為改變時一起改。
 - 選項：`OptionGroup`／`Option` 屬於整間店、以多對多掛在餐點上，只有一層；規則在 `services._choices`（必選、上限、售完、不屬於這道菜）。訂單以 `RoundItemChoice` 保存群組名、選項名與加價。
 - 暫停接單：`OrderingSettings.orders_paused／paused_until／pause_reason`，由 `hours.accepting_orders` 在營業時間之前檢查；到期不需排程。

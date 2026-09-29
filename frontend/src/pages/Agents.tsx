@@ -2,6 +2,7 @@ import { useState } from "react";
 import { change, useData, type AgentRole, type AgentKey } from "../api";
 import { Alert, Field, Form, Modal, text, useAction } from "../ui";
 import { Heading } from "../Heading";
+import { Icon } from "../icons";
 
 export function Agents() {
   const roles = useData<AgentRole[]>("agent-roles/"),
@@ -12,7 +13,6 @@ export function Agents() {
   return (
     <>
       <Heading
-        eyebrow="CUSTOMER SERVICE"
         title="Agent 連接"
         description="讓這間店在 Agenrena 上的客服 Agent 代表商家，為顧客提供服務。"
       >
@@ -28,9 +28,9 @@ export function Agents() {
         message={roles.error?.message || keys.error?.message || action.error}
       />
       <section className="panel connection">
-        <div className="location-icon" aria-hidden>
-          ◇
-        </div>
+        <span className="tile large soft" aria-hidden>
+          <Icon name="agents" />
+        </span>
         <div>
           <h2>顧客服務入口</h2>
           <p>
@@ -55,7 +55,7 @@ export function Agents() {
       <div className="role-grid">
         {roles.data?.map((r) => (
           <section className="panel" key={r.code}>
-            <span className="badge">{r.code}</span>
+            <span className="badge brand">{r.code}</span>
             <h3>{r.label}</h3>
             <ul className="permissions">
               {r.permissions.map((p) => (

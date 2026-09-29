@@ -16,7 +16,6 @@ export function BusinessPage({
   return (
     <>
       <Heading
-        eyebrow="BUSINESS"
         title="商家資料"
         description="這間店的基本資料，會提供給服務顧客的 Agent。一間店就是一個商家，也是 Agenrena 上的一個商家身分。"
       />

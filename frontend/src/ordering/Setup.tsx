@@ -10,7 +10,6 @@ export function Setup() {
   return (
     <>
       <Heading
-        eyebrow="ORDERING"
         title="桌位與營業"
         description="接單方式、營業時間與桌上的 QR code。QR 點餐與 Agent 都依照這裡判斷是否接單。"
       />

@@ -15,3 +15,11 @@ coverage/
 compose.override.yaml
 .preview-*
 .ruff_cache/
+
+release-dist/
+.secrets/
+*.pem
+*.key
+*service-account*.json
+*serviceAccount*.json
+*-firebase-adminsdk-*.json

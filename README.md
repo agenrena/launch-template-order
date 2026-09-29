@@ -24,6 +24,8 @@
 
 ## 啟動
 
+**這個模板要放在伺服器上。** 顧客用自己的手機打開點餐頁（掃桌上 QR code、或 Agent 傳來的確認連結），所以 App 需要一個對外的 HTTPS 網址；只在店內電腦上執行時顧客連不到。business_core 與 booking 預設在店家電腦上執行，order 刻意不提供這條路線。
+
 需要 Docker Compose 與 Python 3。原始碼開發使用 Python 3.13、Node 22.12+、PostgreSQL 14+。
 
 ```sh
@@ -99,6 +101,7 @@ backend/ordering/services.py    下單、接單、代改、關帳、Agent 草稿
 backend/ordering/hours.py       是否接單與原因
 backend/ordering/notifications.py 訂單卡片
 backend/ordering/views.py       QR / 後台 / Agent 三組 API
+frontend/src/theme.css          顏色、字體、圓角與暗色模式（換品牌只改這裡，後台與顧客頁一起變）
 frontend/src/customer/          顧客點餐、確認連結、訂單狀態
 frontend/src/ordering/          後台：訂單、菜單、桌位與營業
 mcp/src/server.ts               點餐工具，組合 mcp/src/core.ts 的核心工具

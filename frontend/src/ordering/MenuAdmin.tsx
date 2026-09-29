@@ -26,7 +26,6 @@ export function MenuAdmin() {
   return (
     <>
       <Heading
-        eyebrow="MENU"
         title="菜單"
         description="顧客、Agent 與店員看到的是同一份菜單。當天沒了就標售完；下架則是整道菜暫時不賣。"
       >
