@@ -36,6 +36,8 @@ GET profile 不建立資料；第一次經顧客確認的 update 才建立。內
 
 ## HTTP / stdio
 
+這間店的 Agent 在商家這一端。App 在這台電腦上（預設）時，Agent 以 stdio 啟動 MCP，後台「Agent 連接」給出完整的 `mcpServers` 設定（`command`、`args`、`CORE_API_URL`，建立金鑰時填好 `CORE_AGENT_KEY`）；App 不需要對外開放。App 放在伺服器上時用 HTTP。
+
 HTTP: POST /mcp，Bearer abc_…，無 MCP session。tools/list 也會先驗證金鑰。Session cookies 不能代替 Agent 金鑰，Agent 金鑰不能進後台。
 
 ```sh
@@ -115,7 +117,7 @@ notify_customer(
 5. list_orders 回這位顧客最近 20 筆訂單，`status_text` 直接轉述；拒單時轉述 `shop_message`。每項帶 `options`（與下單相同格式，「跟上次一樣」可直接重送）與可讀的 `choices`。
 6. cancel_order 只在店家接單前有效；`already_confirmed` 表示請顧客聯絡店家。重送安全。
 
-拒絕以 409 回傳 `error`、`message`（可直接轉述的一句話）與可選的 `next_steps`（例如同分類還有什麼、這個群組還能選什麼）；找不到是 404。選項相關：`option_required`、`too_many_options`、`option_unavailable`、`option_not_offered`、`bad_option`。店家暫停接單時所有入口回 `not_accepting_orders`，`message` 帶原因與預計恢復時間。Agent 不能設定價格、不能修改已送出的訂單，也不能下內用單。
+拒絕以 409 回傳 `error`、`message`（可直接轉述的一句話）與可選的 `next_steps`（例如同分類還有什麼、這個群組還能選什麼）；找不到是 404。選項相關：`option_required`、`too_many_options`、`option_unavailable`、`option_not_offered`、`bad_option`。店家暫停接單時所有入口回 `not_accepting_orders`，`message` 帶原因與預計恢復時間。App 在店裡的電腦上、還沒公開顧客點餐頁（沒有 `ORDER_PUBLIC_BASE_URL`，見 [公開顧客點餐頁](publish.md)）時，`create_order_link` 回 `not_published`：顧客的手機打不開這台電腦，所以不發連結，請顧客到店或來電。Agent 不能設定價格、不能修改已送出的訂單，也不能下內用單。
 
 Agent 查單與取消一律以這位顧客的 CustomerIdentity 限定；其他顧客的訂單回 404。
 

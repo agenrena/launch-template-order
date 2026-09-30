@@ -1,10 +1,18 @@
 # 部署
 
-## 獨立 Compose
+## 這台電腦（預設）
 
-見 README 的 setup / compose / create_owner。所有資料庫與 backend/MCP 埠都在 Compose 私有網路，只有 web 對外；預設綁定 127.0.0.1:8084，避免與 Booking 8080、Business Core 8082、Runtime 5188 混淆。
+見 README：`start.command`／`start.bat` 執行 `scripts/start.py`，只需要 uv 與 Node.js 22.12+。Django 以 waitress 直接提供 API 與建置好的畫面（沒有 nginx），資料是 `data/db.sqlite3`（WAL；寫入交易一開始就取得鎖，同一時間只有一個寫入）。預設只聽 127.0.0.1:8084；`LOCAL_APP=true` 由啟動程式設定，打開本機建立第一位擁有者與 stdio 的 MCP 設定說明。顧客服務 Agent 在同一台電腦以 stdio 啟動 MCP。
 
-正式環境設定專用網域、HTTPS、ALLOWED_HOSTS、CSRF_TRUSTED_ORIGINS、COOKIE_SECURE=true。使用能覆寫 X-Forwarded-Proto 的可信反向代理；不要將私有 backend 直接公開。持久化 PostgreSQL 並安排備份；此模板不自行實作 Runtime 的備份／復原管理。
+顧客的手機要能打開點餐頁：設定 `PUBLIC_PORT` 後，同一個程式另外在 127.0.0.1:`PUBLIC_PORT` 提供只有點餐頁的顧客點餐入口，由店家選的 tunnel 公開；`ORDER_PUBLIC_BASE_URL` 是顧客打開的網址。步驟見 [公開顧客點餐頁](publish.md)。
+
+這台電腦要開著、App 要在執行，顧客才能點餐、Agent 才能回答；開機自動啟動目前沒有內建，由商家或 Agent 依作業系統設定。備份是停止後複製整個資料夾。
+
+## 伺服器：Docker Compose
+
+需要隨時從外面管理後台時使用。見 README 的 setup / compose / create_owner。所有資料庫與 backend/MCP 埠都在 Compose 私有網路，只有 web 對外；預設綁定 127.0.0.1:8084，避免與 Booking 8080、Business Core 8082、Runtime 5188 混淆。整個網站對外，不使用 `PUBLIC_PORT`。
+
+正式環境設定專用網域、HTTPS、ALLOWED_HOSTS、CSRF_TRUSTED_ORIGINS、COOKIE_SECURE=true。使用能覆寫 X-Forwarded-Proto 的可信反向代理；不要將私有 backend 直接公開。持久化 PostgreSQL 並安排備份；此模板不自行實作 Runtime 的備份／復原管理。伺服器路線不設定 `LOCAL_APP`，網頁上的首次建立帳號不會開放。
 
 ## Agenrena Runtime
 
@@ -26,6 +34,6 @@ secret 只放在部署環境：不進原始碼、Git、打包 ZIP、log、API �
 
 App 只連出到 `AGENRENA_BASE_URL`；Agenrena 不回呼 App，不需要對外開放額外端點。
 
-使用 Runtime 的 scripts/pack.py 或相等的排除規則打包。不含 .env、node_modules、.venv、Git、.runtime、資料庫或顧客資料。ZIP root 為此專案根目錄。
+## 發布到模板目錄
 
-本模板未加入 Runtime 的模板選擇介面；未對 AWS 執行部署或建立資源。
+在 GitHub 發正式 release（例如 `v0.1.0`；草稿與 prerelease 不發布）。`.github/workflows/release.yml` 先跑完 `check.yml` 的全部檢查，再以 `scripts/publish_template.py` 從該 commit 打包並上傳到 S3 的模板目錄（`catalog.json` 依模板 id 合併，不會蓋掉其他模板）。ZIP root 為此專案根目錄，不含 .env、node_modules、建置結果、.venv、Git、.github、`data/`、資料庫或密鑰檔；檔案權限照 Git 記錄，所以 `start.command` 保持可執行。需要 repo 的 `template-publish` environment 設定 `LAUNCH_TEMPLATE_BUCKET`、`AWS_TEMPLATE_PUBLISH_ROLE_ARN`，且 AWS 角色信任這個 repo。

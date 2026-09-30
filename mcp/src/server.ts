@@ -75,7 +75,7 @@ export function createServer(api: OrderApi): McpServer {
     "create_order_link",
     {
       description:
-        "Prepare a takeout cart and return a short-lived confirmation_url for the customer. This does not place an order: no kitchen ticket or pickup number exists until the customer reviews, leaves a phone number and confirms on that page, and the shop then decides. Send the URL plainly and say the cart is ready for review. If it expires, create a fresh one. A new customer comes back as new_customer_name_required: ask what they want to be called and call again with customer_name; it is remembered after that. Refusals carry message and next_steps (for example what else the category has) to offer instead of starting over.",
+        "Prepare a takeout cart and return a short-lived confirmation_url for the customer. This does not place an order: no kitchen ticket or pickup number exists until the customer reviews, leaves a phone number and confirms on that page, and the shop then decides. Send the URL plainly and say the cart is ready for review. If it expires, create a fresh one. A new customer comes back as new_customer_name_required: ask what they want to be called and call again with customer_name; it is remembered after that. Refusals carry message and next_steps (for example what else the category has) to offer instead of starting over. not_published means customers' phones cannot open this shop's ordering pages yet: suggest ordering in the store or by phone.",
       inputSchema: {
         customer_ref,
         items,

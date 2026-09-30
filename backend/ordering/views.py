@@ -126,10 +126,19 @@ class ConfirmDraftView(WriteView):
 # ---- Console ----
 
 
+def public_base(request):
+    """Where customers open the ordering pages, or "" when their phones cannot
+    reach this App yet (on this computer, before docs/publish.md)."""
+    if settings.ORDER_PUBLIC_BASE_URL or settings.LOCAL_APP:
+        return settings.ORDER_PUBLIC_BASE_URL
+    return request.build_absolute_uri("/").rstrip("/")
+
+
 class OrderingSettingsView(APIView):
     def get(self, request):
         authorize(human_actor(request.user), "orders.read")
-        return Response(OrderingSettingsSerializer(OrderingSettings.current()).data)
+        data = OrderingSettingsSerializer(OrderingSettings.current()).data
+        return Response({**data, "public_url": public_base(request)})
 
     def patch(self, request):
         serializer = OrderingSettingsSerializer(
@@ -288,8 +297,13 @@ class AgentMenuView(AgentView):
 class AgentDraftsView(AgentView):
     def post(self, request):
         data = validated(DraftInput, request.data)
+        base = public_base(request)
+        if not base:
+            raise services.OrderError(
+                "not_published",
+                "這間店還沒開放線上點餐連結，請顧客直接到店或來電點餐。",
+            )
         draft, token = services.create_draft(agent_actor(request.auth), **data)
-        base = settings.ORDER_PUBLIC_BASE_URL or request.build_absolute_uri("/").rstrip("/")
         return Response(
             {
                 "draft_id": str(draft.pk),

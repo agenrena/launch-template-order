@@ -19,7 +19,7 @@ from .models import (
     CustomerIdentity,
     Membership,
 )
-from .permissions import Actor, authorize, scoped_customer
+from .permissions import Actor, authorize, human_actor, scoped_customer
 
 logger = logging.getLogger(__name__)
 # Deliveries happen after commit, outside any person's or Agent's request.
@@ -50,6 +50,30 @@ def check_password(password, user):
         validate_password(password, user)
     except DjangoValidationError as exc:
         raise ValidationError({"password": exc.messages}) from exc
+
+
+def has_owner():
+    return Membership.objects.filter(role="owner", user__is_active=True).exists()
+
+
+@transaction.atomic
+def create_first_owner(username, password):
+    """First active owner of a new install. Never takes over an existing account."""
+    Business.current()
+    Business.objects.select_for_update().get(pk=1)
+    if has_owner():
+        raise Conflict("已有擁有者，請由後台管理成員。")
+    User = get_user_model()
+    if User.objects.filter(username=username).exists():
+        raise Conflict("帳號已存在。")
+    user = User(username=username)
+    check_password(password, user)
+    user.set_password(password)
+    user.full_clean()
+    user.save()
+    Membership.objects.create(user=user, role="owner")
+    audit(human_actor(user), "owner.initialized", user)
+    return user
 
 
 @transaction.atomic

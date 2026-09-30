@@ -1,11 +1,43 @@
 import { useState } from "react";
-import { change, useData, type AgentRole, type AgentKey } from "../api";
+import {
+  change,
+  useData,
+  type AgentRole,
+  type AgentKey,
+  type McpInfo,
+} from "../api";
 import { Alert, Field, Form, Modal, text, useAction } from "../ui";
 import { Heading } from "../Heading";
 import { Icon } from "../icons";
 
+// Agent on this computer: the standard mcpServers entry most Agents accept.
+function stdioConfig(
+  mcp: Extract<McpInfo, { transport: "stdio" }>,
+  key: string,
+) {
+  const server = {
+    command: mcp.command,
+    args: mcp.args,
+    env: { ...mcp.env, [mcp.key_env]: key },
+  };
+  return JSON.stringify({ mcpServers: { [mcp.name]: server } }, null, 2);
+}
+
+function Snippet({ value }: { value: string }) {
+  return (
+    <textarea
+      className="snippet"
+      readOnly
+      rows={value.split("\n").length}
+      value={value}
+      onFocus={(e) => e.target.select()}
+    />
+  );
+}
+
 export function Agents() {
-  const roles = useData<AgentRole[]>("agent-roles/"),
+  const mcp = useData<McpInfo>("mcp/"),
+    roles = useData<AgentRole[]>("agent-roles/"),
     keys = useData<AgentKey[]>("keys/"),
     action = useAction(),
     [creating, setCreating] = useState(false),
@@ -25,7 +57,12 @@ export function Agents() {
         </button>
       </Heading>
       <Alert
-        message={roles.error?.message || keys.error?.message || action.error}
+        message={
+          mcp.error?.message ||
+          roles.error?.message ||
+          keys.error?.message ||
+          action.error
+        }
       />
       <section className="panel connection">
         <span className="tile large soft" aria-hidden>
@@ -33,19 +70,32 @@ export function Agents() {
         </span>
         <div>
           <h2>顧客服務入口</h2>
-          <p>
-            把這個網址與金鑰加入這間店 Agent 的 MCP 設定。要讓顧客在 Agenrena
-            對話裡收到進度通知，請到「商家資料」連接 Agenrena。
-          </p>
-          <label className="field">
-            <span>MCP 網址</span>
-            <input
-              readOnly
-              value={`${window.location.origin}/mcp`}
-              onFocus={(e) => e.target.select()}
-            />
-          </label>
-          <code>Authorization: Bearer &lt;你的金鑰&gt;</code>
+          {mcp.data?.transport === "stdio" ? (
+            <>
+              <p>
+                這間店的 Agent 在這台電腦上時，建立金鑰後把下面的設定交給
+                Agent，加入它的 MCP 設定。要讓顧客在 Agenrena
+                對話裡收到進度通知，請到「商家資料」連接 Agenrena。
+              </p>
+              <Snippet value={stdioConfig(mcp.data, "<你的金鑰>")} />
+            </>
+          ) : mcp.data ? (
+            <>
+              <p>
+                把這個網址與金鑰加入這間店 Agent 的 MCP 設定。要讓顧客在
+                Agenrena 對話裡收到進度通知，請到「商家資料」連接 Agenrena。
+              </p>
+              <label className="field">
+                <span>MCP 網址</span>
+                <input
+                  readOnly
+                  value={mcp.data.url}
+                  onFocus={(e) => e.target.select()}
+                />
+              </label>
+              <code>Authorization: Bearer &lt;你的金鑰&gt;</code>
+            </>
+          ) : null}
         </div>
       </section>
       <div className="section-head compact">
@@ -153,10 +203,26 @@ export function Agents() {
       )}
       {secret && (
         <Modal title="保存你的 Agent 金鑰" close={() => setSecret("")}>
-          <p>金鑰只顯示這一次，請存入 Agent 的連線設定。</p>
-          <Field label="新金鑰">
-            <input readOnly value={secret} onFocus={(e) => e.target.select()} />
-          </Field>
+          {mcp.data?.transport === "stdio" ? (
+            <>
+              <p>
+                金鑰只顯示這一次。把下面整段設定交給這間店的
+                Agent（已經填好金鑰）。
+              </p>
+              <Snippet value={stdioConfig(mcp.data, secret)} />
+            </>
+          ) : (
+            <>
+              <p>金鑰只顯示這一次，請存入 Agent 的連線設定。</p>
+              <Field label="新金鑰">
+                <input
+                  readOnly
+                  value={secret}
+                  onFocus={(e) => e.target.select()}
+                />
+              </Field>
+            </>
+          )}
           <button className="primary" onClick={() => setSecret("")}>
             我已保存
           </button>

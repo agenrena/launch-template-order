@@ -161,16 +161,28 @@ function WeeklyHours() {
 
 function Tables() {
   const tables = useData<TableRow[]>("tables/");
+  const settings = useData<OrderingSettings>("ordering-settings/");
   const action = useAction();
+  const published = settings.data?.public_url;
+  // Before publishing, the links still open the pages on this computer to try.
+  const base = published || window.location.origin;
   return (
     <section className="panel">
       <div className="section-head compact">
         <h2>桌位與 QR code</h2>
       </div>
-      <p className="muted">
-        桌上的 QR code 開啟內用點餐，同桌的人共用一張帳單。櫃檯的外帶 QR code
-        指向首頁 {window.location.origin}/。
-      </p>
+      {published ? (
+        <p className="muted">
+          桌上的 QR code 開啟內用點餐，同桌的人共用一張帳單。櫃檯的外帶 QR code
+          指向首頁 {published}/。
+        </p>
+      ) : (
+        <p className="notice">
+          顧客的手機還連不到這台電腦，所以先不產生 QR code。要讓顧客掃碼點餐，請
+          Agent 依照 docs/publish.md
+          開放「顧客點餐入口」。在那之前，可以用下面的連結在這台電腦上試用點餐頁。
+        </p>
+      )}
       <Form
         busy={action.busy}
         onSubmit={(d) =>
@@ -186,12 +198,13 @@ function Tables() {
       </Form>
       <Alert message={tables.error?.message || action.error} />
       <div className="table-grid">
-        <TableCode label="外帶" url={`${window.location.origin}/`} />
+        <TableCode label="外帶" url={`${base}/`} qr={!!published} />
         {tables.data?.map((t) => (
           <div key={t.id}>
             <TableCode
               label={`桌 ${t.code}`}
-              url={`${window.location.origin}/?table=${encodeURIComponent(t.code)}`}
+              url={`${base}/?table=${encodeURIComponent(t.code)}`}
+              qr={!!published}
               muted={!t.is_active}
             />
             <label className="check">
@@ -219,16 +232,19 @@ function Tables() {
 function TableCode({
   label,
   url,
+  qr,
   muted = false,
 }: {
   label: string;
   url: string;
+  qr: boolean;
   muted?: boolean;
 }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
-    void QRCode.toDataURL(url, { margin: 1, width: 180 }).then(setSrc);
-  }, [url]);
+    if (qr) void QRCode.toDataURL(url, { margin: 1, width: 180 }).then(setSrc);
+    else setSrc("");
+  }, [url, qr]);
   return (
     <figure className={"table-code " + (muted ? "muted" : "")}>
       {src && <img src={src} alt={`${label} 的點餐 QR code`} />}

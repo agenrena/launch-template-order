@@ -83,6 +83,8 @@ export interface OrderingSettings {
   accepts_takeout: boolean;
   last_order_minutes_before_close: number;
   agenrena_short_id: string;
+  // Where customers open the ordering pages; "" until they can reach this App.
+  public_url?: string;
 }
 export interface HoursStatus {
   accepting_orders: boolean;

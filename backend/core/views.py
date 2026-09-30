@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import (
     authenticate,
     get_user_model,
@@ -6,12 +7,12 @@ from django.contrib.auth import (
     update_session_auth_hash,
 )
 from django.db import connection, transaction
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
-from rest_framework.exceptions import AuthenticationFailed, ValidationError
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
@@ -66,13 +67,27 @@ def paginate(request, rows, serializer):
     }
 
 
+def setup_open(request):
+    """A fresh local install lets the person at this computer create the first owner.
+
+    Hosted installs use create_owner / runtime_bootstrap instead.
+    """
+    return (
+        settings.LOCAL_APP
+        and request.META.get("REMOTE_ADDR") in ("127.0.0.1", "::1")
+        and not services.has_owner()
+    )
+
+
 class SessionView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        user = user_json(request.user) if member_role(request.user) else None
         return Response(
             {
-                "user": user_json(request.user) if member_role(request.user) else None,
+                "user": user,
+                "setup": user is None and setup_open(request),
                 "csrf_token": get_token(request),
             }
         )
@@ -96,6 +111,20 @@ class LoginView(APIView):
         login(request, user)
         services.audit(human_actor(user), "account.login", user)
         return Response({"user": user_json(user), "csrf_token": get_token(request)})
+
+
+class SetupView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [LoginThrottle]
+
+    @method_decorator(csrf_protect)
+    def post(self, request):
+        if not setup_open(request):
+            raise PermissionDenied("這個 App 已經有擁有者，請登入。")
+        user = services.create_first_owner(**validated(s.LoginInput, request.data))
+        login(request, user)
+        return Response({"user": user_json(user), "csrf_token": get_token(request)}, status=201)
 
 
 class LogoutView(APIView):
@@ -220,6 +249,25 @@ class RevokeKeyView(APIView):
         return Response({"status": "revoked"})
 
 
+class McpView(APIView):
+    """How this store's Agent connects: stdio on the same computer, or HTTP /mcp."""
+
+    def get(self, request):
+        authorize(human_actor(request.user), "agents.manage")
+        if settings.LOCAL_APP:
+            return Response(
+                {
+                    "transport": "stdio",
+                    "name": settings.MCP_NAME,
+                    "command": "node",
+                    "args": [str(settings.MCP_ENTRY), "--stdio"],
+                    "env": {"CORE_API_URL": request.build_absolute_uri("/api/agent-api/")},
+                    "key_env": "CORE_AGENT_KEY",
+                }
+            )
+        return Response({"transport": "http", "url": request.build_absolute_uri("/mcp")})
+
+
 class AgenrenaView(APIView):
     def get(self, request):
         return Response(services.agenrena_overview(human_actor(request.user)))
@@ -308,3 +356,21 @@ def health(request):
     except Exception:
         return JsonResponse({"status": "unavailable"}, status=503)
     return JsonResponse({"status": "ok"})
+
+
+def frontend(request, path=""):
+    """Local installs: Django serves the built console. Hosted installs use nginx."""
+    dist = settings.FRONTEND_DIST.resolve()
+    if path.startswith("assets/"):
+        target = (dist / path).resolve()
+        if not target.is_file() or not target.is_relative_to(dist):
+            raise Http404
+        response = FileResponse(target.open("rb"))
+        response["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+    index = dist / "index.html"
+    if not index.is_file():
+        raise Http404("Frontend is not built.")
+    response = FileResponse(index.open("rb"), content_type="text/html; charset=utf-8")
+    response["Cache-Control"] = "no-cache"
+    return response

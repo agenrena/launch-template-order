@@ -6,7 +6,7 @@
 2. 核心範圍：Business（這間店）、使用者、登入、基本後台、Agent 接入、Agenrena 連接、操作紀錄。
 3. **一間店，一套 App。** Business 就是這間店，沒有 Location／分店結構，也不是 multi-tenant。連鎖或加盟時每間店各自部署一套 App（2026-09-28 取代原本的「一個 Business 多個 Location」）。
 4. 登入預設獨立 Django 帳號密碼。沒有 Agenrena SSO，不共用 Agenrena Firebase；商家自行客製其他登入方式。
-5. 人預設 owner / admin。第一位 owner 私下設定密碼或由 Runtime 提供隨機初始憑證。禁止移除最後一位有效 owner。
+5. 人預設 owner / admin。第一位 owner 在本機由這台電腦的網頁建立（見 21），在伺服器上私下設定密碼或由 Runtime 提供隨機初始憑證。禁止移除最後一位有效 owner。
 6. Coding Agent 修改程式與處理部署；Business Agent 預設面對顧客，並非管理後台的營運代理。
 7. Agent 有獨立權限表，預設一個 customer_service 權限組。各功能明確檢查操作與資料範圍，後續角色由商家自行修改。
 8. Agenrena 提供固定 customer_ref。App 以可空且有值時唯一的 agenrena_customer_ref 對應內部顧客身分 UUID（見 17）。手動顧客可沒有 reference，不按姓名／電話自動合併。
@@ -27,6 +27,12 @@
 18. **通知是核心能力，事件由業務模板決定。** 核心提供 `notify_customer`，在交易提交後送進顧客與這間店的對話；送達失敗不影響業務資料，店家撤銷授權後自動停止。核心本身不主動發訊息。
 19. **不在這一版：** identity link（有簽章的顧客身分連結）、Runtime 自動建立 Vendor 與輪替、接收顧客訊息（inbound webhook）、品牌層跨店識別與合併報表。
 
+## 預設在店家自己的電腦上（2026-09-30）
+
+20. **Agent 由商家帶來、跑在商家這一端**；Agenrena 是帶著自己 Agent 進來的社群，不代管 Agent，也不回呼 App。Agent 在同一台電腦以 stdio 使用 MCP，通知由 App 主動連出 Agenrena。
+21. **預設本機執行，伺服器是選項。** 一間店 = 一個資料夾：只需要 uv 與 Node.js，SQLite 資料在 `data/`，點兩下 `start.command`／`start.bat` 就開始，第一次在網頁上建立擁有者。需要隨時從外面管理的店再用 Docker Compose + PostgreSQL 放到伺服器；同一份程式碼。
+22. 同時支援 SQLite 與 PostgreSQL，只用兩者都有的功能。「先檢查再寫入」靠 services 裡的交易與鎖，不靠 PostgreSQL 專屬的資料庫限制。
+
 ## Order 模板已確認決策（2026-09-28）
 
 - 以 business_core 的完整副本加上 ordering 業務建立，不做執行期共用依賴；來源專案 `Documents/order` 不修改、不搬資料，也不帶入其 .env、服務帳戶、照片或虛擬環境。
@@ -39,3 +45,14 @@
 - 營運設備配對不放進模板：它是另一種登入方式，和 Firebase 同屬商家自行客製的範圍（決策 4、11）。開發文件寫明做法與安全規則，由商家的 Coding Agent 實作。
 - 沿用 order 的產品決策：QR 頁只做瀏覽與下單，問答留在 Agent 對話並以連結導向 Agenrena；Agent 只準備購物車，由顧客確認送出；每次送出都先待確認；不做即時庫存；外帶必留電話；有問題由店家聯絡顧客後代改；Agent 接單後不能取消。
 - 全新 schema，沒有舊資料升級路徑。
+
+## 點餐也預設在店裡的電腦，顧客入口可以公開（2026-09-30）
+
+原本（2026-09-30 稍早）判斷 order 只能放伺服器：顧客要用自己的手機打開點餐頁。後來改為和其他模板一樣預設在店裡的電腦執行，理由是點餐只發生在營業時間，而營業時間店裡的電腦本來就開著。
+
+- **App 自己把顧客會用到的部分分開。** `PUBLIC_PORT` 只提供點餐頁（`/`、`/d/`、`/o/`、`/assets/`、`/api/web/`），其他路徑一律 404（`backend/config/public.py`）。後台、首次建立擁有者、Agent API 與 MCP 永遠不在這個入口上。這不能交給 tunnel 的路徑設定：tunnel 從這台電腦連進 App，所以外面的請求看起來都像「這台電腦」，而核心正是用這個條件開放首次建立擁有者。
+- **怎麼公開由店家決定，模板只寫指引。** Cloudflare Tunnel、Tailscale Funnel、自己的反向代理都可以，程式裡不寫死任何一家；[公開顧客點餐頁](publish.md)以 Cloudflare Tunnel 為範例。不設定就只在店內電腦使用。
+- **沒公開就明確不能用，不發出打不開的連結。** 沒有 `ORDER_PUBLIC_BASE_URL` 時後台不產生 QR code、Agent 準備訂單會收到 `not_published`；伺服器路線預設就是自己的網址。
+- 顧客入口只綁 127.0.0.1，只信任同一台電腦上 tunnel 轉來的顧客位址（X-Forwarded-For），讓點餐頻率限制按顧客計算。
+- 後台只在這台電腦上使用；讓店員的手機或平板也能用屬於客製。
+- 模板規格上的區別：booking、repair 的顧客只在 Agenrena 對話裡，沒有顧客網頁，所以沒有顧客入口；order 的顧客一定要開網頁，所以有顧客點餐入口，公開哪些路徑定義在 `backend/config/public.py`。

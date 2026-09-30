@@ -14,8 +14,7 @@ import { MenuAdmin } from "./ordering/MenuAdmin";
 import { Setup } from "./ordering/Setup";
 
 export function App() {
-  const session = useData<{ user: User | null }>("session/"),
-    action = useAction();
+  const session = useData<{ user: User | null; setup: boolean }>("session/");
   if (session.isPending)
     return <main className="loading">正在載入工作空間…</main>;
   if (session.error)
@@ -27,72 +26,121 @@ export function App() {
       </main>
     );
   if (!session.data.user)
-    return (
-      <div className="login-shell">
-        <aside className="login-story">
-          <div className="wordmark">
-            agenrena<span>ORDER</span>
-          </div>
-          <div>
-            <p className="eyebrow">YOUR BUSINESS, YOUR WAY</p>
-            <h1>
-              從你的生意，
-              <br />
-              開始。
-            </h1>
-            <p>
-              一個屬於你的工作空間。
-              <br />
-              管理商家資料與團隊，讓服務從這裡展開。
-            </p>
-          </div>
-          <small>ONE STORE · ONE APP</small>
-        </aside>
-        <main className="login">
-          <p className="eyebrow">WELCOME BACK</p>
-          <h1>登入商家後台</h1>
-          <p className="muted">使用這個商家的帳號與密碼。</p>
-          <Form
-            busy={action.busy}
-            onSubmit={(d) =>
-              action.run(async () => {
-                await api("login/", "POST", {
-                  username: text(d, "username"),
-                  password: String(d.get("password")),
-                });
-                client.clear();
-                await session.refetch();
-              })
-            }
-          >
-            <Field label="帳號">
-              <input
-                name="username"
-                autoComplete="username"
-                required
-                autoFocus
-              />
-            </Field>
-            <Field label="密碼">
-              <input
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </Field>
-            <Alert message={action.error} />
-            <button className="primary wide">
-              {action.busy ? "登入中…" : "登入工作空間 →"}
-            </button>
-          </Form>
-          <p className="login-help">
-            需要帳號或重設密碼？請聯絡這個商家的擁有者。
-          </p>
-        </main>
-      </div>
-    );
+    return <Entry setup={session.data.setup} done={() => session.refetch()} />;
   return <Console user={session.data.user} />;
+}
+function Entry({
+  setup,
+  done,
+}: {
+  setup: boolean;
+  done: () => Promise<unknown>;
+}) {
+  const action = useAction();
+  const submit = (path: string, d: FormData) =>
+    action.run(async () => {
+      const password = String(d.get("password"));
+      if (setup && password !== String(d.get("confirm")))
+        throw new Error("兩次輸入的密碼不同。");
+      await api(path, "POST", { username: text(d, "username"), password });
+      client.clear();
+      await done();
+    });
+  return (
+    <div className="login-shell">
+      <aside className="login-story">
+        <div className="wordmark">
+          agenrena<span>ORDER</span>
+        </div>
+        <div>
+          <p className="eyebrow">YOUR BUSINESS, YOUR WAY</p>
+          <h1>
+            從你的生意，
+            <br />
+            開始。
+          </h1>
+          <p>
+            一個屬於你的工作空間。
+            <br />
+            管理商家資料與團隊，讓服務從這裡展開。
+          </p>
+        </div>
+        <small>ONE STORE · ONE APP</small>
+      </aside>
+      <main className="login">
+        {setup ? (
+          <>
+            <p className="eyebrow">FIRST TIME</p>
+            <h1>建立擁有者帳號</h1>
+            <p className="muted">
+              這是這間店的第一個帳號，之後用它登入、管理團隊與 Agent。
+            </p>
+            <Form busy={action.busy} onSubmit={(d) => submit("setup/", d)}>
+              <Field label="帳號">
+                <input
+                  name="username"
+                  autoComplete="username"
+                  required
+                  autoFocus
+                />
+              </Field>
+              <Field label="密碼">
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                />
+              </Field>
+              <Field label="再輸入一次密碼">
+                <input
+                  name="confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                />
+              </Field>
+              <Alert message={action.error} />
+              <button className="primary wide">
+                {action.busy ? "建立中…" : "建立並進入工作空間 →"}
+              </button>
+            </Form>
+          </>
+        ) : (
+          <>
+            <p className="eyebrow">WELCOME BACK</p>
+            <h1>登入商家後台</h1>
+            <p className="muted">使用這個商家的帳號與密碼。</p>
+            <Form busy={action.busy} onSubmit={(d) => submit("login/", d)}>
+              <Field label="帳號">
+                <input
+                  name="username"
+                  autoComplete="username"
+                  required
+                  autoFocus
+                />
+              </Field>
+              <Field label="密碼">
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                />
+              </Field>
+              <Alert message={action.error} />
+              <button className="primary wide">
+                {action.busy ? "登入中…" : "登入工作空間 →"}
+              </button>
+            </Form>
+            <p className="login-help">
+              需要帳號或重設密碼？請聯絡這個商家的擁有者。
+            </p>
+          </>
+        )}
+      </main>
+    </div>
+  );
 }
 function Console({ user }: { user: User }) {
   const [tab, setTab] = useState("orders"),

@@ -4,12 +4,14 @@
 
 ## 開發環境
 
-Python 3.13、Node 22.12+、PostgreSQL 14+。不使用 SQLite 代替 PostgreSQL 測試。
+Python 3.13、Node 22.12+。沒有 `DATABASE_URL` 時用 SQLite（`data/`，或 `DATA_DIR` 指定的資料夾）；設定後用 PostgreSQL 14+。兩種都是正式支援的路線，後端測試兩種都要過。
+
+最直接的方式是 `./start.command`：它就是商家實際執行的樣子，改完程式重新執行會自動重建。需要前端即時重載時：
 
 ```sh
 python3.13 -m venv .venv
 .venv/bin/pip install -r backend/requirements.txt
-# 私下設定 SECRET_KEY、DATABASE_URL；後端不自動讀取 .env。
+# 私下設定 SECRET_KEY；後端不自動讀取 .env（start.py 會）。
 .venv/bin/python backend/manage.py migrate
 .venv/bin/python backend/manage.py create_owner --username owner
 .venv/bin/python backend/manage.py runserver 127.0.0.1:8044
@@ -22,16 +24,18 @@ Vite 使用 5192，代理 API 到 8044、MCP 到 8768。可用 ORDER_DEV_API / O
 ## 修改入口與驗證
 
 - 新增共同欄位：models → migration → serializer → service → UI。
-- 新增顧客工具：AgentPermission/Role migration → permissions/services → Agent API → MCP schema/tool description → PostgreSQL與 MCP 測試。
+- 新增顧客工具：AgentPermission/Role migration → permissions/services → Agent API → MCP schema/tool description → 後端與 MCP 測試。
 - 新增顧客資料讀寫：先取得 scoped_customer，再以其內部 UUID 限制所有查詢。測試 A 顧客不能讀寫 B 的資料。
 - 新增顧客通知：決定事件與卡片內容，在業務寫入的交易裡呼叫 notify_customer，`message_id` 對同一事實保持穩定。測試用 `patch("core.agenrena._request", …)` 模擬平台，參考 core/tests/test_agenrena.py；不要在測試中連到真實 Agenrena。
 - 更換登入：session/login/logout、authentication 與前端登入頁；保留 CSRF、Membership 授權及操作紀錄。Firebase 是商家可自行實作的客製，沒有預先整合。
 - 新增角色：人的 HUMAN_PERMISSIONS 與 Membership choices/constraint；Agent 則改 AgentRole/AgentPermission 資料。兩者不要混用。
 - 首次預設在 0002_defaults migration，只跑一次；不要每次啟動重設商家已修改的角色資料。
 - 更新業務資料和成功操作紀錄在同一個 transaction。不要將完整輸入直接放入 audit.detail。
+- 資料庫：只用 SQLite 與 PostgreSQL 都有的功能（不要用 `django.contrib.postgres`）。會「先檢查再寫入」的規則放在 services 的 `transaction.atomic` 裡並先 `select_for_update` 鎖住相關資料列：PostgreSQL 靠這個鎖排隊，SQLite 靠寫入交易的 IMMEDIATE 模式排隊。
 
 ```sh
-.venv/bin/python backend/manage.py test core.tests ordering.tests --noinput
+.venv/bin/python backend/manage.py test core.tests ordering.tests --noinput                  # SQLite
+DATABASE_URL=postgresql://… .venv/bin/python backend/manage.py test core.tests ordering.tests --noinput
 .venv/bin/python backend/manage.py makemigrations --check --dry-run
 npm run build --prefix frontend
 npm test --prefix mcp
@@ -41,7 +45,7 @@ Role/Permission 是具體權限表，不是通用規則引擎。沒有分店結�
 
 ## 真實 HTTP 驗證
 
-前端與 MCP 完成 npm ci / build 後，設定 DATABASE_URL 指向有 CREATEDB 權限的**開發用** PostgreSQL，再執行：
+本機路線以 `./start.command --no-browser` 實際啟動驗證。伺服器路線：前端與 MCP 完成 npm ci / build 後，設定 DATABASE_URL 指向有 CREATEDB 權限的**開發用** PostgreSQL，再執行：
 
 ```sh
 .venv/bin/python scripts/http_smoke.py
@@ -54,6 +58,8 @@ Role/Permission 是具體權限表，不是通用規則引擎。沒有分店結�
 - 規則：`ordering/services.py`（下單、接單、代改、關帳、Agent 草稿與取消）與 `ordering/hours.py`（是否接單）。三個入口都呼叫它們；新增規則時放這裡，並同時測 QR、後台與 Agent。
 - 資料：`ordering/models.py`。訂單明細複製名稱與價格；改菜單不影響已送出的訂單。
 - 三組 API：`ordering/views.py`（`/api/web/` 公開、`/api/console/` 後台、`/api/agent-api/` Agent），回應格式在 `ordering/payloads.py`。
+- 顧客入口：`config/public.py` 的 `PUBLIC_PREFIXES` 決定哪些路徑可以從外面連到（見 [公開顧客點餐頁](publish.md)）。新增顧客頁或顧客 API 時放在這些前綴下（例如 `/api/web/…`）；後台、Agent 與 MCP 的路徑絕不加進去。`ordering/tests/test_public.py` 驗證兩邊。
+- 顧客網址：QR code 與 Agent 確認連結都用 `views.public_base`。本機沒有 `ORDER_PUBLIC_BASE_URL` 時它是空的：後台不產生 QR code，Agent 收到 `not_published`。
 - 通知：`ordering/notifications.py`。新增事件時沿用 `announce`，讓 `client_message_id` 對同一事實穩定。
 - 前端：顧客頁 `frontend/src/customer/`（不登入、手機優先）；後台 `frontend/src/ordering/`。
 - 更換外觀：只改 `frontend/src/theme.css`。換品牌色改 `--brand`（淺色品牌色時把 `--brand-fg` 改成深色），後台與顧客點餐頁的按鈕、淺底、連結都會跟著變；暗色模式在同檔的 `prefers-color-scheme` 區塊。`style.css`、`customer/customer.css` 與元件只能用 `var(--…)`，`npm run check:style`（build 也會跑）會擋下寫死的顏色。顧客頁較大的圓角由 `--radius-lg` 算出。訂單狀態：待確認用品牌淺底、完成用 `--ok`、拒單／打烊用 `--danger`。
@@ -73,3 +79,7 @@ Role/Permission 是具體權限表，不是通用規則引擎。沒有分店結�
   - 配對碼要短時效、單次使用，並限制頻率；只知道畫面上的配對碼不能領走憑證（領取時要搭配發起配對的瀏覽器本身的憑證）。
   - 設備的操作寫入操作紀錄時記錄「哪台設備」，不要冒用授權它的人的身分。
 - **Firebase 等外部登入**：替換 session/login/logout 與前端登入頁，保留 Membership 授權、CSRF 與操作紀錄。
+
+## 客製：讓後台也能從外面用
+
+模板的後台只在這台電腦上用，顧客入口也刻意不含後台。店員想用手機或櫃檯平板接單時，建議用私人網路（例如 Tailscale，不開 Funnel）讓那些裝置連到這台電腦的後台 port，而不是把後台公開到網路上；公開時至少要改用 HTTPS、`COOKIE_SECURE=true`，並確認 `LOCAL_APP` 的首次建立擁有者只在擁有者已存在後才對外。

@@ -22,11 +22,33 @@
 
 這是全新資料庫的 schema，沒有舊資料升級路徑；原本 `Documents/order` 專案的資料不會搬過來。
 
-## 啟動
+## 在這台電腦上開始（預設）
 
-**這個模板要放在伺服器上。** 顧客用自己的手機打開點餐頁（掃桌上 QR code、或 Agent 傳來的確認連結），所以 App 需要一個對外的 HTTPS 網址；只在店內電腦上執行時顧客連不到。business_core 與 booking 預設在店家電腦上執行，order 刻意不提供這條路線。
+一間店 = 一個資料夾。不需要 Docker 或資料庫伺服器，只需要 [uv](https://docs.astral.sh/uv/) 與 Node.js 22.12+；沒有的話請 Agent 安裝。
 
-需要 Docker Compose 與 Python 3。原始碼開發使用 Python 3.13、Node 22.12+、PostgreSQL 14+。
+- macOS：點兩下 `start.command`（或在終端機執行 `./start.command`）
+- Windows：點兩下 `start.bat`
+
+第一次會自動產生這台電腦專用的 `.env`、安裝套件、建置畫面並建立資料庫，完成後打開後台 **http://127.0.0.1:8084/console/**，在畫面上建立擁有者帳號（只能在這台電腦上建立，且只有第一次）。之後再執行只會直接開啟；程式被 Agent 改過時會自動重新建置。按 Ctrl+C 或關掉視窗就停止。
+
+依序：商家資料 → 菜單 → 桌位與營業（營業時間）→ 開放顧客點餐（下一節）。沒有預設帳密、金鑰、菜單或顧客。
+
+**資料都在 `data/`**（SQLite）。備份或換電腦：停止 App 後複製整個專案資料夾（含 `data/` 與 `.env`）。`data/` 與 `.env` 不進 Git。忘記密碼時執行 `./start.command manage changepassword <帳號>`（Windows：`start.bat manage changepassword <帳號>`），或請 Agent 代為執行。
+
+## 讓顧客用手機點餐
+
+顧客要用自己的手機打開點餐頁（掃桌上的 QR code、或 Agent 傳來的確認連結），但預設只有這台電腦連得到。所以還沒公開時，後台不產生 QR code，Agent 準備訂單也會收到 `not_published`，不會發出打不開的連結。
+
+App 內建一個只有點餐頁的**顧客點餐入口**：在 `.env` 設定 `PUBLIC_PORT` 與 `ORDER_PUBLIC_BASE_URL`，再用 Cloudflare Tunnel 等工具把一個固定的 HTTPS 網址轉到它。後台、建立擁有者、Agent API 與 MCP 都不在這個入口上，不管 tunnel 怎麼設定都連不到。要用哪個工具由店家決定；不設定就只在店內電腦上使用。步驟見 [公開顧客點餐頁](docs/publish.md)。
+
+- 顧客點餐頁：`<公開網址>/`（外帶）、`/?table=A1`（內用）
+- 商家後台：只在這台電腦上，http://127.0.0.1:8084/console/
+
+點餐只發生在營業時間，而營業時間店裡的電腦本來就開著；請關掉營業時間的自動睡眠。
+
+## 放到伺服器上
+
+要隨時從外面管理後台時，改用 Docker Compose + PostgreSQL 放到伺服器上，整個網站對外，不需要顧客點餐入口的設定。同一份程式碼，以 `DATABASE_URL` 決定用哪種資料庫。
 
 ```sh
 python3 scripts/setup.py
@@ -34,14 +56,9 @@ docker compose up --build -d
 docker compose exec backend python manage.py create_owner --username owner
 ```
 
-第三步私下設定第一位擁有者的密碼。
+第三步私下設定第一位擁有者的密碼。`ORDER_PUBLIC_BASE_URL` 設成正式網址，細節見 [部署](docs/deployment.md)。
 
-- 顧客點餐頁：**http://localhost:8084/**（外帶）、`/?table=A1`（內用）
-- 商家後台：**http://localhost:8084/console**
-
-依序：商家資料 → 菜單 → 桌位與營業（營業時間、QR code）→ 開始接單。沒有預設帳密、金鑰、菜單或顧客；`setup.py` 拒絕覆蓋 `.env`。
-
-登入使用獨立 Django session，不接 Agenrena SSO，也不共用 Firebase。忘記密碼時由部署管理者執行 `docker compose exec backend python manage.py changepassword <username>`。
+登入使用獨立 Django session，不接 Agenrena SSO，也不共用 Firebase。
 
 ## 三個入口
 
@@ -51,7 +68,10 @@ docker compose exec backend python manage.py create_owner --username owner
 - 內用：掃桌上的 QR code，同桌的人看到同一張帳單，可以一直加點；店員結帳關帳後才換下一組客人。
 - 點餐頁只做瀏覽與下單。想問推薦、辣度或過敏原，頁面引導顧客到 Agenrena 問這間店的 Agent（在「桌位與營業」填 Agenrena 商家代碼後出現）。
 
-**Agent**（`/mcp`，Bearer `abc_…`）
+**Agent**（擁有者在「Agent 連接」建立金鑰，只顯示一次）
+
+- **Agent 在這台電腦上（預設）**：頁面直接給一段 `mcpServers` 設定（`node mcp/dist/index.js --stdio`，金鑰已填好），交給 Agent 即可。MCP 不在顧客點餐入口上，不需要對外開放。
+- **App 放在伺服器上**：連到 `https://<網域>/mcp` 並帶 `Authorization: Bearer abc_…`。
 
 | Tool | 能力 |
 |---|---|
@@ -63,14 +83,14 @@ docker compose exec backend python manage.py create_owner --username owner
 | `list_orders` | 這位顧客在這間店的訂單 |
 | `cancel_order` | 店家接單前取消 |
 
-Agent 只準備購物車；顧客在確認頁檢查、留電話、按送出後才成立訂單並取號，再由店家接單。新顧客第一次要提供稱呼。Agent 不能改價，也不能修改已送出的訂單。只做外帶：內用的人桌上就有 QR code。
+Agent 只準備購物車；顧客在確認頁檢查、留電話、按送出後才成立訂單並取號，再由店家接單。還沒公開顧客點餐頁時，`create_order_link` 回 `not_published`。新顧客第一次要提供稱呼。Agent 不能改價，也不能修改已送出的訂單。只做外帶：內用的人桌上就有 QR code。
 
 **後台**（`/console`）
 
 - 訂單：待確認、製作中、待結帳、已結束。接單、拒單（寫原因給顧客）、完成、結帳／關帳；有問題先聯絡顧客，談妥後「修改」（可改數量、選項、價格），可順便接單。忙不過來時暫停接單。
 - 菜單：分類與餐點；選項群組；餐點與選項的售完一鍵切換。
 - 總覽：今天已接單的張數與金額（不含待確認、拒單與取消，不是實收金額）。
-- 桌位與營業：外帶／內用、幣別、停止接單時間、Agenrena 商家代碼、每週營業時間、桌號與 QR code。
+- 桌位與營業：外帶／內用、幣別、停止接單時間、Agenrena 商家代碼、每週營業時間、桌號與 QR code（公開顧客點餐頁之後才產生）。
 
 ## Agenrena
 
@@ -95,6 +115,8 @@ Agent 只準備購物車；顧客在確認頁檢查、留電話、按送出後�
 ## 程式結構
 
 ```text
+scripts/start.py                在這台電腦上執行（start.command / start.bat 呼叫它），含顧客點餐入口
+backend/config/public.py        顧客點餐入口放行哪些路徑
 backend/core/                   共同能力的本地副本（見 docs/core-copy.md）
 backend/ordering/models.py      菜單、桌位、營業時間、帳單／每次送出、確認連結草稿
 backend/ordering/services.py    下單、接單、代改、關帳、Agent 草稿與取消；三個入口共用
@@ -110,11 +132,12 @@ mcp/src/server.ts               點餐工具，組合 mcp/src/core.ts 的核心�
 ## 驗證
 
 ```sh
-# 已設定專用測試 PostgreSQL 的 DATABASE_URL / SECRET_KEY
-.venv/bin/python backend/manage.py test core.tests ordering.tests --noinput
+.venv/bin/python backend/manage.py test core.tests ordering.tests --noinput      # SQLite（預設）
+DATABASE_URL=postgresql://… .venv/bin/python backend/manage.py test core.tests ordering.tests --noinput
 .venv/bin/python backend/manage.py makemigrations --check --dry-run
 npm run build --prefix frontend
 npm test --prefix mcp
+./start.command --no-browser                     # 實際在這台電腦上啟動
 # 自行建立及刪除獨立 smoke database，需開發用 CREATEDB 權限
 .venv/bin/python scripts/http_smoke.py
 ```
@@ -123,4 +146,4 @@ npm test --prefix mcp
 
 [MIT](LICENSE)。可以免費使用、修改，也可以拿去幫店家建置並收費，不需要向 Agenrena 分潤或回報；只要保留 LICENSE 檔即可。「Agenrena」名稱與商標不在授權範圍內，改過的版本請不要宣稱是 Agenrena 官方版本。
 
-[產品決策](docs/product-decisions.md) · [客製開發](docs/development.md) · [Agent 契約](docs/agent.md) · [部署](docs/deployment.md) · [核心副本](docs/core-copy.md) · [驗證紀錄](docs/verification.md)
+[產品決策](docs/product-decisions.md) · [公開顧客點餐頁](docs/publish.md) · [客製開發](docs/development.md) · [Agent 契約](docs/agent.md) · [部署](docs/deployment.md) · [核心副本](docs/core-copy.md) · [驗證紀錄](docs/verification.md)

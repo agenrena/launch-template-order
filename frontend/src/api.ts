@@ -72,6 +72,16 @@ export interface AgentKey {
   revoked_at: string | null;
   created_at: string;
 }
+export type McpInfo =
+  | { transport: "http"; url: string }
+  | {
+      transport: "stdio";
+      name: string;
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+      key_env: string;
+    };
 export interface AgenrenaState {
   configured: boolean;
   status: "none" | "pending" | "connected" | "revoked" | "expired";

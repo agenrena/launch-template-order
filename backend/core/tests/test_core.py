@@ -1,11 +1,14 @@
 import io
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.db import IntegrityError, close_old_connections, transaction
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase, TransactionTestCase, override_settings
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.test import APIClient
 
@@ -374,6 +377,78 @@ class CoreTests(TestCase):
         self.assertEqual(u.membership.role, "owner")
         self.assertFalse(u.is_superuser)
         self.assertTrue(u.check_password(PASSWORD))
+
+
+class LocalAppTests(TestCase):
+    def test_first_owner_is_created_from_this_computer_once(self):
+        client = APIClient()
+        with override_settings(LOCAL_APP=True):
+            self.assertTrue(client.get("/api/console/session/").json()["setup"])
+            response = client.post(
+                "/api/console/setup/",
+                {"username": "owner", "password": PASSWORD},
+                format="json",
+            )
+            self.assertEqual(response.status_code, 201)
+            self.assertEqual(response.json()["user"]["role"], "owner")
+            # Logged in right away; a second setup is refused.
+            self.assertEqual(client.get("/api/console/business/").status_code, 200)
+            self.assertFalse(APIClient().get("/api/console/session/").json()["setup"])
+            again = APIClient().post(
+                "/api/console/setup/",
+                {"username": "other", "password": PASSWORD},
+                format="json",
+            )
+            self.assertEqual(again.status_code, 403)
+        self.assertEqual(Membership.objects.filter(role="owner").count(), 1)
+        self.assertTrue(AuditEvent.objects.filter(action="owner.initialized").exists())
+
+    def test_setup_is_closed_when_hosted_or_remote(self):
+        data = {"username": "owner", "password": PASSWORD}
+        hosted = APIClient().post("/api/console/setup/", data, format="json")
+        self.assertEqual(hosted.status_code, 403)
+        self.assertFalse(APIClient().get("/api/console/session/").json()["setup"])
+        with override_settings(LOCAL_APP=True):
+            remote = APIClient().post(
+                "/api/console/setup/", data, format="json", REMOTE_ADDR="192.168.1.20"
+            )
+            self.assertEqual(remote.status_code, 403)
+        self.assertFalse(Membership.objects.exists())
+
+    def test_mcp_connection_info(self):
+        owner = get_user_model().objects.create_user(username="owner", password=PASSWORD)
+        Membership.objects.create(user=owner, role="owner")
+        client = APIClient()
+        client.force_login(owner)
+        hosted = client.get("/api/console/mcp/").json()
+        self.assertEqual(hosted, {"transport": "http", "url": "http://testserver/mcp"})
+        with override_settings(LOCAL_APP=True):
+            local = client.get("/api/console/mcp/").json()
+        self.assertEqual(local["transport"], "stdio")
+        self.assertEqual(local["name"], settings.MCP_NAME)
+        self.assertEqual(local["args"][-1], "--stdio")
+        self.assertEqual(local["env"], {"CORE_API_URL": "http://testserver/api/agent-api/"})
+        self.assertNotIn("CORE_AGENT_KEY", local["env"])
+
+    def test_serves_built_console(self):
+        with tempfile.TemporaryDirectory() as root:
+            dist = Path(root) / "dist"
+            (dist / "assets").mkdir(parents=True)
+            (Path(root) / "secret.txt").write_text("outside")
+            (Path(dist) / "index.html").write_text("<div id=root></div>")
+            (Path(dist) / "assets" / "app.js").write_text("console.log(1)")
+            client = APIClient()
+            with override_settings(FRONTEND_DIST=Path(dist)):
+                for path in ["/", "/console/anything"]:
+                    response = client.get(path)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertIn(b"root", b"".join(response.streaming_content))
+                asset = client.get("/assets/app.js")
+                self.assertEqual(asset.status_code, 200)
+                self.assertIn("immutable", asset["Cache-Control"])
+                self.assertEqual(client.get("/assets/missing.js").status_code, 404)
+                self.assertEqual(client.get("/assets/..%2F..%2Fsecret.txt").status_code, 404)
+                self.assertEqual(client.get("/api/console/nothing/").status_code, 404)
 
 
 class ConcurrentIdentityTests(TransactionTestCase):

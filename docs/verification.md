@@ -1,5 +1,22 @@
 # 驗證紀錄
 
+## 2026-09-30：預設在店裡的電腦上執行、顧客點餐入口
+
+同步 business_core 的本機執行，並加上只含點餐頁的顧客點餐入口。Agenrena 未設定，沒有連到真實平台；也沒有建立真實的 Cloudflare Tunnel，改以帶 `Host` 與 `X-Forwarded-For` 的請求模擬 tunnel。
+
+| 檢查 | 結果 |
+|---|---|
+| 後端測試 | core.tests + ordering.tests 共 80 項，在 SQLite（預設）與 PostgreSQL 17 都通過；包含 8 筆外帶同時送出拿到 1–8 各不相同的取餐號（SQLite 同樣成立） |
+| 顧客點餐入口（測試） | `test_public.py`：`/`、`/assets/`、`/d/`、`/o/`、`/api/web/…` 放行；`/console`、`/api/console/setup/`、`/api/console/…`、`/api/agent-api/…`、`/mcp`、`/health/` 與含 `..` 的路徑都擋下，沒有到達 App。沒有公開網址時 Agent 收到 `not_published` 且不留下草稿或顧客資料；有公開網址時連結用它；伺服器路線預設用自己的網址 |
+| 本機啟動 | scratchpad 乾淨副本，只有 `/usr/bin:/bin` 的 PATH 執行 `./start.command --no-browser`：自動建立 `.env`、安裝、建置、migrate，開在 `http://127.0.0.1:8084/console/`；網頁建立擁有者（第二次 403）；建菜單、選項、桌位、營業時間；顧客外帶與內用下單、店員接單、今日金額；Agent 連接頁給出 `order` 的 stdio 設定，用它以 stdio 呼叫 `get_menu`、`create_order_link` 成功 |
+| 顧客點餐入口（實際） | `PUBLIC_PORT=8184`、`ORDER_PUBLIC_BASE_URL=https://order.example.com`：啟動訊息顯示入口；經入口 `/`、`/?table=A1`、`/d/…`、`/o/…`、`/api/web/store/` 為 200，外帶下單成功；`/console/`、`/api/console/session/`、`/api/console/setup/`（含 POST）、`/api/agent-api/menu/`、`/mcp`、`/health/` 都是 404；用區域網路 IP 連不到入口。Agent 連結與後台 QR code 都用 `https://order.example.com` |
+| 點餐頻率限制 | 原本經入口的請求全部算同一個來源，第 27 位不同顧客就被 429（waitress 預設清掉轉送標頭）。改為只信任 127.0.0.1 轉來的 `X-Forwarded-For` 後：35 位不同顧客都成功，同一位連續送單在第 31 次被擋 |
+| 畫面 | Chrome 截圖「桌位與營業」：未公開時顯示說明、不產生 QR code、保留試用連結；公開後 QR code 與說明文字指向公開網址 |
+| 伺服器路線 | `http_smoke.py`（PostgreSQL、Streamable HTTP MCP、代理、CSRF、撤銷金鑰）通過；乾淨副本 `docker compose up --build`：backend 以 waitress 執行，建立擁有者、建菜單、顧客下單、店員接單通過，後台顯示的公開網址為 Compose 的預設值 |
+| 前端／MCP | 正式建置（含 check:style）通過；MCP 10 項測試通過（`create_order_link` 描述加上 `not_published`） |
+
+尚未執行：真實 Cloudflare Tunnel／Tailscale Funnel 端到端、Windows `start.bat`、與真實 Agenrena 的授權與通知。
+
 ## 2026-09-30：樣式集中於 theme.css、發布流程
 
 同步 business_core 的樣式重構（theme.css、check:style、側欄圖示）與發布流程；刻意不同步本機執行，order 只在伺服器上執行。Agenrena 未設定。

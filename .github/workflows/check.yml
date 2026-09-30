@@ -56,6 +56,10 @@ jobs:
       - run: python -m pip install -r backend/requirements.txt -r scripts/requirements-publish.txt
       - run: python -m unittest discover -s scripts -p 'test_publish_template.py' -v
       - run: python backend/manage.py test core.tests ordering.tests --noinput
+      - name: Backend tests on SQLite (the local default)
+        run: python backend/manage.py test core.tests ordering.tests --noinput
+        env:
+          DATABASE_URL: ''
       - run: python backend/manage.py makemigrations --check --dry-run
       - run: npm ci --prefix frontend
       - run: npm run build --prefix frontend

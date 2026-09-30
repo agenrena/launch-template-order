@@ -6,4 +6,6 @@ RUN pip install --no-cache-dir -r requirements.txt && useradd --create-home app
 COPY backend/ ./
 USER app
 EXPOSE 8000
-CMD ["sh", "-c", "exec gunicorn config.wsgi:application --bind [::]:${PORT:-8000} --workers 2 --access-logfile - --error-logfile -"]
+# Same server as local (scripts/start.py). Proxy headers pass through unchanged;
+# Django trusts X-Forwarded-Proto only when TRUST_PROXY=true.
+CMD ["sh", "-c", "exec waitress-serve --listen=*:${PORT:-8000} --threads=8 --no-clear-untrusted-proxy-headers config.wsgi:application"]
