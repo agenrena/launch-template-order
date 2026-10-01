@@ -6,7 +6,7 @@ from decimal import Decimal
 from core.models import Business
 from django.conf import settings
 
-from . import hours
+from . import hours, photos
 from .models import Category, MenuItem, OrderingSettings, Round
 
 STATUS_TEXT = {
@@ -47,7 +47,9 @@ def store():
 
 
 def _categories():
-    return Category.objects.filter(is_active=True).prefetch_related("items__option_groups__options")
+    return Category.objects.filter(is_active=True).prefetch_related(
+        "items__option_groups__options", "items__photos"
+    )
 
 
 def web_groups(item):
@@ -117,6 +119,7 @@ def web_menu():
                         # Shown, not hidden: a dish off today is still a dish here.
                         "orderable": item.is_orderable,
                         "option_groups": web_groups(item),
+                        "photos": [photos.payload(p) for p in item.photos.all()],
                     }
                     for item in category.items.all()
                     if item.is_active

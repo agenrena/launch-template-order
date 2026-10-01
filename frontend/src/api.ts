@@ -11,8 +11,18 @@ export async function api<T>(
   const response = await fetch(`/api/console/${path}`, {
     method,
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
-    body: data === undefined ? undefined : JSON.stringify(data),
+    headers: {
+      ...(data instanceof FormData
+        ? {}
+        : { "Content-Type": "application/json" }),
+      "X-CSRFToken": csrf,
+    },
+    body:
+      data instanceof FormData
+        ? data
+        : data === undefined
+          ? undefined
+          : JSON.stringify(data),
   });
   const body =
     response.status === 204 ? {} : await response.json().catch(() => ({}));

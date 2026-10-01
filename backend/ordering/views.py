@@ -1,3 +1,5 @@
+import json
+
 from core.permissions import agent_actor, authorize, human_actor
 from core.serializers import CustomerRefInput
 from core.services import audit
@@ -5,6 +7,7 @@ from core.views import AgentView, validated
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Prefetch, Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, viewsets
 from rest_framework.permissions import AllowAny
@@ -13,7 +16,17 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from . import hours, payloads, services
-from .models import Category, MenuItem, Option, OptionGroup, OrderingSettings, Round, Tab, Table
+from .models import (
+    Category,
+    MenuItem,
+    MenuPhoto,
+    Option,
+    OptionGroup,
+    OrderingSettings,
+    Round,
+    Tab,
+    Table,
+)
 from .serializers import (
     AmendInput,
     CategorySerializer,
@@ -56,6 +69,21 @@ class WriteView(PublicView):
 class StoreView(PublicView):
     def get(self, request):
         return Response(payloads.web_menu())
+
+
+class MenuPhotoView(PublicView):
+    def get(self, request, pk, variant):
+        if variant not in {"image", "thumbnail"}:
+            raise Http404
+        photo = get_object_or_404(MenuPhoto, pk=pk)
+        try:
+            file = getattr(photo, variant).open("rb")
+        except FileNotFoundError as exc:
+            raise Http404 from exc
+        response = FileResponse(file, content_type="image/webp")
+        response["Cache-Control"] = "public, max-age=3600"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
 
 
 class JoinTableView(WriteView):
@@ -180,8 +208,19 @@ class CategoryViewSet(CatalogViewSet):
 
 
 class MenuItemViewSet(CatalogViewSet):
-    queryset = MenuItem.objects.all()
+    queryset = MenuItem.objects.prefetch_related("photos")
     serializer_class = MenuItemSerializer
+
+    def get_serializer(self, *args, **kwargs):
+        if "data" in kwargs and self.request.content_type.startswith("multipart/form-data"):
+            try:
+                data = json.loads(self.request.data.get("payload", ""))
+            except (ValueError, TypeError) as exc:
+                raise serializers.ValidationError("餐點資料格式不正確。") from exc
+            if not isinstance(data, dict):
+                raise serializers.ValidationError("餐點資料格式不正確。")
+            kwargs["data"] = data
+        return super().get_serializer(*args, **kwargs)
 
 
 class OptionGroupViewSet(CatalogViewSet):

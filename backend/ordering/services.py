@@ -507,19 +507,31 @@ def cancel_by_customer(actor, *, customer_ref, order_id):
 # ---- Menu, tables, hours and settings (console) ----
 
 
-@transaction.atomic
 def save_catalog(actor, serializer):
+    from .photos import delete_files
+
     authorize(actor, "menu.write")
-    new = serializer.instance is None
-    result = serializer.save()
-    name = result._meta.model_name
-    audit(
-        actor,
-        f"{name}.created" if new else f"{name}.updated",
-        result,
-        detail={"fields": sorted(serializer.validated_data)},
-    )
-    return result
+    serializer.photo_writes = []
+    try:
+        with transaction.atomic():
+            # Serialize edits to the same dish, including its ordered photo set.
+            if isinstance(serializer.instance, MenuItem):
+                serializer.instance = MenuItem.objects.select_for_update().get(
+                    pk=serializer.instance.pk
+                )
+            new = serializer.instance is None
+            result = serializer.save()
+            name = result._meta.model_name
+            audit(
+                actor,
+                f"{name}.created" if new else f"{name}.updated",
+                result,
+                detail={"fields": sorted(serializer.validated_data)},
+            )
+            return result
+    except Exception:
+        delete_files(serializer.photo_writes)
+        raise
 
 
 @transaction.atomic

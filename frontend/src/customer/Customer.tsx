@@ -1,6 +1,6 @@
 /** What a customer with a phone sees: browse and order. Questions and
  * recommendations belong in the conversation with the store's Agent. */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { hydrate, priced, useCart, type CartLine } from "./cart";
 import {
@@ -13,6 +13,8 @@ import {
   type Store,
   type Tab,
 } from "./web";
+
+import { photoPosition, type MenuPhoto } from "../ordering/Photos";
 
 const go = (path: string) => window.location.assign(path);
 
@@ -326,17 +328,25 @@ function Ordering({
               <ul>
                 {category.items.map((item) => (
                   <li key={item.id}>
-                    <button
-                      className="c-item"
-                      disabled={!item.orderable || closed}
-                      onClick={() => setPicked(item)}
-                    >
+                    <button className="c-item" onClick={() => setPicked(item)}>
                       <span>
                         <strong>{item.name}</strong>
                         {!item.orderable && <em>已售完</em>}
                         {item.description && <small>{item.description}</small>}
+                        <b>{money(item.price, store.currency)}</b>
                       </span>
-                      <b>{money(item.price, store.currency)}</b>
+                      {item.photos[0] && (
+                        <img
+                          className="menu-photo-thumb"
+                          src={item.photos[0].thumbnail_url}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          style={{
+                            objectPosition: photoPosition(item.photos[0]),
+                          }}
+                        />
+                      )}
                     </button>
                   </li>
                 ))}
@@ -356,6 +366,7 @@ function Ordering({
       {picked && (
         <ItemSheet
           item={picked}
+          canOrder={!closed && picked.orderable}
           currency={store.currency}
           close={() => setPicked(null)}
           add={(quantity, note, options) => {
@@ -380,13 +391,79 @@ function Ordering({
   );
 }
 
+function PhotoGallery({ photos, name }: { photos: MenuPhoto[]; name: string }) {
+  const track = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  if (!photos.length) return null;
+  function goTo(next: number) {
+    const node = track.current;
+    if (node)
+      node.scrollTo({ left: next * node.clientWidth, behavior: "smooth" });
+  }
+  return (
+    <section className="c-gallery" aria-label={`${name}的照片`}>
+      <div
+        className="c-photo-track"
+        ref={track}
+        onScroll={(e) => {
+          const node = e.currentTarget;
+          setIndex(
+            Math.max(
+              0,
+              Math.min(
+                photos.length - 1,
+                Math.round(node.scrollLeft / node.clientWidth),
+              ),
+            ),
+          );
+        }}
+      >
+        {photos.map((photo, i) => (
+          <img
+            key={photo.id}
+            src={photo.url}
+            alt={`${name}，第 ${i + 1} 張照片`}
+            loading={i === 0 ? "eager" : "lazy"}
+            decoding="async"
+          />
+        ))}
+      </div>
+      {photos.length > 1 && (
+        <div className="c-gallery-controls">
+          <button
+            type="button"
+            aria-label="上一張照片"
+            disabled={index === 0}
+            onClick={() => goTo(index - 1)}
+          >
+            ←
+          </button>
+          <span aria-live="polite">
+            {index + 1} / {photos.length}
+          </span>
+          <button
+            type="button"
+            aria-label="下一張照片"
+            disabled={index === photos.length - 1}
+            onClick={() => goTo(index + 1)}
+          >
+            →
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ItemSheet({
   item,
+  canOrder,
   currency,
   close,
   add,
 }: {
   item: MenuItem;
+  canOrder: boolean;
   currency: string;
   close: () => void;
   add: (quantity: number, note: string, options: string[]) => void;
@@ -412,6 +489,7 @@ function ItemSheet({
   }
   return (
     <Sheet title={item.name} close={close}>
+      <PhotoGallery photos={item.photos} name={item.name} />
       {item.description && <p className="c-note">{item.description}</p>}
       {item.option_groups.map((group) => (
         <fieldset className="c-group" key={group.id}>
@@ -467,11 +545,17 @@ function ItemSheet({
       </label>
       <button
         className="c-primary"
-        disabled={missing.length > 0 || !unit}
+        disabled={!canOrder || missing.length > 0 || !unit}
         onClick={() => add(quantity, note.trim(), options)}
       >
         <span>
-          {missing.length ? `請選擇${missing[0].name}` : "加入購物車"}
+          {!canOrder
+            ? item.orderable
+              ? "目前不接單"
+              : "已售完"
+            : missing.length
+              ? `請選擇${missing[0].name}`
+              : "加入購物車"}
         </span>
         <span>
           {money(Number(unit?.price ?? item.price) * quantity, currency)}

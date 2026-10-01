@@ -1,3 +1,4 @@
+import type { MenuPhoto } from "./Photos";
 export type RoundStatus =
   "pending" | "confirmed" | "completed" | "rejected" | "cancelled";
 export interface ConsoleLine {
@@ -48,6 +49,7 @@ export interface Category {
   is_active: boolean;
 }
 export interface AdminItem {
+  photos: MenuPhoto[];
   id: string;
   category: string;
   name: string;

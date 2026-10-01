@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { change, useData } from "../api";
 import { Alert, Field, Form, Modal, text, useAction } from "../ui";
+import { PhotoEditor, photoPosition, usePhotos } from "./Photos";
 import { Heading } from "../Heading";
 import {
   money,
@@ -63,13 +64,24 @@ export function MenuAdmin() {
             {rows.length === 0 && <p className="empty">這個分類還沒有餐點。</p>}
             {rows.map((item) => (
               <div className="list-row" key={item.id}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <small>
-                    {money(item.price, currency)}
-                    {!item.is_active && " · 已下架"}
-                    {item.guidance && " · 有給 Agent 的說明"}
-                  </small>
+                <div className="menu-admin-name">
+                  {item.photos[0] && (
+                    <img
+                      className="menu-photo-thumb"
+                      src={item.photos[0].thumbnail_url}
+                      alt=""
+                      loading="lazy"
+                      style={{ objectPosition: photoPosition(item.photos[0]) }}
+                    />
+                  )}
+                  <div>
+                    <strong>{item.name}</strong>
+                    <small>
+                      {money(item.price, currency)}
+                      {!item.is_active && " · 已下架"}
+                      {item.guidance && " · 有給 Agent 的說明"}
+                    </small>
+                  </div>
                 </div>
                 <div className="actions">
                   <label className="check">
@@ -233,8 +245,13 @@ function ItemEditor({
 }) {
   const current = "id" in item ? item : null;
   const action = useAction();
+  const photos = usePhotos(current?.photos ?? []);
   return (
-    <Modal title={current ? "編輯餐點" : "新增餐點"} close={close}>
+    <Modal
+      title={current ? "編輯餐點" : "新增餐點"}
+      close={close}
+      busy={action.busy}
+    >
       <Form
         busy={action.busy}
         onSubmit={(d) =>
@@ -242,7 +259,7 @@ function ItemEditor({
             await change(
               `menu-items/${current ? current.id + "/" : ""}`,
               current ? "PATCH" : "POST",
-              {
+              photos.form({
                 category: text(d, "category"),
                 name: text(d, "name"),
                 description: text(d, "description"),
@@ -254,7 +271,7 @@ function ItemEditor({
                 ...(groups.length
                   ? { option_groups: d.getAll("option_groups").map(String) }
                   : {}),
-              },
+              }),
             );
             close();
           })
@@ -295,6 +312,7 @@ function ItemEditor({
             defaultValue={current?.description}
           />
         </Field>
+        <PhotoEditor state={photos} />
         <Field label="給 Agent 的說明（顧客看不到）">
           <textarea
             name="guidance"

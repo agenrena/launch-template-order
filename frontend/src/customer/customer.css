@@ -352,3 +352,42 @@
 .c-off {
   opacity: 0.5;
 }
+
+.c-item > span {
+  flex: 1;
+  align-content: start;
+}
+.c-item b {
+  margin-top: 0.3rem;
+}
+.c-photo-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+}
+.c-photo-track > img {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 0;
+  height: var(--menu-photo-height);
+  object-fit: contain;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.c-gallery {
+  min-width: 0;
+}
+.c-gallery-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.c-gallery-controls button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}

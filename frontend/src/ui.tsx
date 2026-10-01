@@ -60,19 +60,24 @@ export function Modal({
   title,
   children,
   close,
+  busy = false,
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
+  busy?: boolean;
 }) {
   return (
     <dialog
       ref={(node) => {
         if (node && !node.open) node.showModal();
       }}
-      onCancel={close}
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!busy) close();
+      }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) close();
+        if (!busy && e.target === e.currentTarget) close();
       }}
     >
       <div className="modal-head">
@@ -81,6 +86,7 @@ export function Modal({
           type="button"
           className="quiet"
           aria-label="關閉"
+          disabled={busy}
           onClick={close}
         >
           ✕

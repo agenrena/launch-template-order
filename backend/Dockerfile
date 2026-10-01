@@ -4,6 +4,8 @@ WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt && useradd --create-home app
 COPY backend/ ./
+RUN mkdir -p /app/media && chown app:app /app/media
+ENV MEDIA_ROOT=/app/media
 USER app
 EXPOSE 8000
 # Same server as local (scripts/start.py). Proxy headers pass through unchanged;

@@ -2,6 +2,7 @@ from core.serializers import StrictInput
 from django.db import transaction
 from rest_framework import serializers
 
+from . import photos
 from .models import Category, MenuItem, Option, OptionGroup, OrderingSettings, Table
 
 
@@ -47,7 +48,57 @@ class CategorySerializer(StrictModelSerializer):
         fields = ["id", "name", "sort_order", "is_active"]
 
 
+class PhotoInput(StrictInput):
+    id = serializers.UUIDField(required=False)
+    upload = serializers.CharField(required=False, max_length=40)
+    focal_x = serializers.IntegerField(min_value=0, max_value=100, default=50)
+    focal_y = serializers.IntegerField(min_value=0, max_value=100, default=50)
+
+    def validate(self, attrs):
+        if ("id" in attrs) == ("upload" in attrs):
+            raise serializers.ValidationError("請選擇現有照片或上傳新照片。")
+        return attrs
+
+
 class MenuItemSerializer(StrictModelSerializer):
+    photos = PhotoInput(many=True, required=False, max_length=photos.MAX_PHOTOS)
+
+    def validate_photos(self, rows):
+        known = set(self.instance.photos.values_list("id", flat=True)) if self.instance else set()
+        ids = [r["id"] for r in rows if "id" in r]
+        uploads = [r["upload"] for r in rows if "upload" in r]
+        if len(ids) != len(set(ids)) or not set(ids) <= known:
+            raise serializers.ValidationError("照片已變更，請重新整理後再試。")
+        if len(uploads) != len(set(uploads)):
+            raise serializers.ValidationError("同一張上傳照片不能重複使用。")
+        files = self.context["request"].FILES
+        for row in rows:
+            if "upload" in row:
+                file = files.get(row["upload"])
+                if file is None:
+                    raise serializers.ValidationError("找不到上傳照片，請重新選擇。")
+                row["prepared"] = photos.prepare(file)
+        return rows
+
+    def create(self, validated_data):
+        rows = validated_data.pop("photos", [])
+        item = super().create(validated_data)
+        photos.sync(item, rows, self.photo_writes)
+        return item
+
+    def update(self, item, validated_data):
+        rows = validated_data.pop("photos", None)
+        item = super().update(item, validated_data)
+        if rows is not None:
+            photos.sync(item, rows, self.photo_writes)
+        return item
+
+    def to_representation(self, item):
+        # PhotoInput is a write contract; publish only generated URLs on reads.
+        data = super().to_representation(item)
+        data["photos"] = [photos.payload(p) for p in item.photos.all()]
+        return data
+
     class Meta:
         model = MenuItem
         fields = [
@@ -61,6 +112,7 @@ class MenuItemSerializer(StrictModelSerializer):
             "sort_order",
             "is_active",
             "option_groups",
+            "photos",
         ]
 
     def validate_price(self, value):

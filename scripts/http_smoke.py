@@ -16,10 +16,12 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 import psycopg2
+from PIL import Image
 from psycopg2 import sql
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,7 +42,7 @@ def main():
     control.autocommit = True
     children = []
     created = False
-    with tempfile.TemporaryFile(mode="w+") as logs:
+    with tempfile.TemporaryFile(mode="w+") as logs, tempfile.TemporaryDirectory() as media:
         try:
             with control.cursor() as cursor:
                 cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
@@ -51,6 +53,7 @@ def main():
             env = {
                 **os.environ,
                 "DATABASE_URL": dsn,
+                "MEDIA_ROOT": media,
                 "SECRET_KEY": secrets.token_urlsafe(48),
                 "COOKIE_SECURE": "false",
                 "ALLOWED_HOSTS": "localhost,127.0.0.1",
@@ -123,13 +126,17 @@ def main():
             )
             csrf = ""
 
-            def request(path, data=None, method=None):
+            def request(path, data=None, method=None, content_type="application/json"):
                 nonlocal csrf
                 req = urllib.request.Request(
                     base + "/api/console/" + path,
-                    data=None if data is None else json.dumps(data).encode(),
+                    data=data
+                    if isinstance(data, bytes)
+                    else None
+                    if data is None
+                    else json.dumps(data).encode(),
                     method=method,
-                    headers={"Content-Type": "application/json", "X-CSRFToken": csrf},
+                    headers={"Content-Type": content_type, "X-CSRFToken": csrf},
                 )
                 with opener.open(req, timeout=5) as response:
                     result = json.load(response)
@@ -170,6 +177,41 @@ def main():
                     "option_groups": [size["id"]],
                 },
             )
+            # The same multipart edit used by the photo editor, through the real proxy.
+            boundary = "photo-smoke-" + secrets.token_hex(12)
+            chunks = []
+            manifest = {"photos": [{"upload": "first"}, {"upload": "second"}]}
+            chunks.append(
+                f'--{boundary}\r\nContent-Disposition: form-data; name="payload"\r\n\r\n'.encode()
+                + json.dumps(manifest).encode()
+                + b"\r\n"
+            )
+            for upload_key, color in [("first", "red"), ("second", "blue")]:
+                buffer = BytesIO()
+                Image.new("RGB", (1800, 900), color).save(buffer, "JPEG")
+                chunks.append(
+                    f'--{boundary}\r\nContent-Disposition: form-data; name="{upload_key}"; filename="dish.jpg"\r\nContent-Type: image/jpeg\r\n\r\n'.encode()
+                    + buffer.getvalue()
+                    + b"\r\n"
+                )
+            chunks.append(f"--{boundary}--\r\n".encode())
+            album = request(
+                f"menu-items/{burger['id']}/",
+                b"".join(chunks),
+                "PATCH",
+                f"multipart/form-data; boundary={boundary}",
+            )["photos"]
+            assert len(album) == 2
+            for field, size in [("url", (1600, 800)), ("thumbnail_url", (480, 240))]:
+                with urllib.request.urlopen(base + album[0][field]) as response:
+                    assert response.headers["Content-Type"] == "image/webp"
+                    assert Image.open(BytesIO(response.read())).size == size
+            reordered = request(
+                f"menu-items/{burger['id']}/",
+                {"photos": [{"id": album[1]["id"], "focal_x": 20}, {"id": album[0]["id"]}]},
+                "PATCH",
+            )
+            assert reordered["photos"][0]["id"] == album[1]["id"]
             request("tables/", {"code": "A1"})
             all_day = [{"opens_at": "00:00", "closes_at": "23:59"}]
             request(
@@ -188,6 +230,7 @@ def main():
                     return json.load(response)
 
             store = public("store/")
+            assert store["menu"][0]["items"][0]["photos"][0]["id"] == album[1]["id"]
             assert store["accepting_orders"] and store["menu"][0]["items"][0]["name"] == "牛肉堡"
             takeout = public(
                 "orders/", {"phone": "0912", "items": [{"item": burger["id"], "options": [large]}]}

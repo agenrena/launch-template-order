@@ -83,3 +83,12 @@
 - 命名測試涵蓋無設定／空白／無效設定的預設值、中文與特殊字元、初始化後不覆蓋、登入前讀取、登入後改名與未授權拒絕。
 - Agenrena 下載 ZIP 的純 Python 測試 9 項通過；以產出的設定實際初始化 Core 臨時 SQLite，確認採用下載名稱。
 - 瀏覽器視覺與互動驗收未完成：電腦操作工具未獲 Chrome 權限。Agenrena 後端完整 Django 測試依其 AGENTS.md 須由使用者於既有環境執行；未執行真實 S3／下載網站端到端驗證，也尚未發布模板。
+
+## 2026-10-02：餐點多張照片
+
+- SQLite、隔離 PostgreSQL 17 的 core.tests + ordering.tests 各 91 項通過（含新增 9 項照片測試）。
+- 照片測試涵蓋：批次上傳、新餐點與照片一起建立、1600px／480px 縮圖、EXIF 移除與旋轉、PNG 讀取、排序與縮圖位置、移除／清空與檔案清理、錯誤圖片整批拒絕、數量／大小／像素限制、跨餐點照片 ID 拒絕、匿名／Agent／CSRF 拒絕、儲存失敗回復資料並清理新檔案。
+- makemigrations --check --dry-run、Ruff、前端 TypeScript／check:style／Vite build 與 10 項 MCP 測試通過。
+- scripts/http_smoke.py 通過：隔離 PostgreSQL 與真實本機 HTTP／Vite proxy，驗證含 CSRF 的雙照片上傳、公開原圖／縮圖讀取、排序與顧客菜單照片順序，再完成 QR、Agent、顧客確認、店員接單與取消等原流程。測試圖片與資料庫均為臨時資料；未連線真實 Agenrena。
+- 部署設定：Nginx 設定展開後 `nginx -t` 通過；Docker Compose 以假值 `config --quiet` 通過。臨時 PostgreSQL 已停止。
+- 瀏覽器畫面與滑動／拖曳操作未驗收：沒有可用瀏覽器連線，Chrome 電腦操作權限未核准。未執行 Docker image build、Runtime 持久儲存部署或發布模板。

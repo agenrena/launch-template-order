@@ -1,3 +1,4 @@
+import type { MenuPhoto } from "../ordering/Photos";
 /** The public ordering API. Nobody signs in: the table or the link is the credential. */
 export interface OptionGroup {
   id: string;
@@ -12,6 +13,7 @@ export interface OptionGroup {
   }[];
 }
 export interface MenuItem {
+  photos: MenuPhoto[];
   id: string;
   name: string;
   description: string;

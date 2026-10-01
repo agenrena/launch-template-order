@@ -45,6 +45,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Hosted (Compose/Runtime): DATABASE_URL points at PostgreSQL.
 LOCAL_APP = os.getenv("LOCAL_APP", "false").lower() == "true"
 DATA_DIR = Path(os.getenv("DATA_DIR") or BASE_DIR.parent / "data")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT") or DATA_DIR / "media")
+# Files spool to disk; at most 12 photos, 10 MiB each, per menu edit.
+DATA_UPLOAD_MAX_NUMBER_FILES = 12
 SOFTWARE_DEFAULT_NAME = "Order"
 SOFTWARE_CONFIG_FILE = BASE_DIR / "app-config.json"
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"

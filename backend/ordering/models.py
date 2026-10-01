@@ -157,6 +157,18 @@ class MenuItem(Record):
         return self.is_active and self.availability == self.AVAILABLE
 
 
+class MenuPhoto(Record):
+    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name="photos")
+    image = models.FileField(upload_to="menu/")
+    thumbnail = models.FileField(upload_to="menu/")
+    sort_order = models.PositiveIntegerField(default=0)
+    focal_x = models.PositiveSmallIntegerField(default=50)
+    focal_y = models.PositiveSmallIntegerField(default=50)
+
+    class Meta:
+        ordering = ["sort_order", "created_at"]
+
+
 class Table(Record):
     """A table, and what a dine-in QR code points at. Everyone at it shares one bill."""
 

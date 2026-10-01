@@ -1044,3 +1044,60 @@ footer {
     margin: 6vh auto;
   }
 }
+
+/* Menu photos: the same square crop in the console and customer list. */
+.menu-photo-thumb {
+  width: var(--menu-photo-size);
+  height: var(--menu-photo-size);
+  flex: 0 0 var(--menu-photo-size);
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+}
+.menu-admin-name {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+.menu-admin-name > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.photo-editor {
+  display: grid;
+  gap: 0.75rem;
+  padding-block: 0.75rem;
+}
+.photo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.photo-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.photo-row img {
+  cursor: grab;
+}
+.photo-controls {
+  display: grid;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+.photo-controls summary {
+  cursor: pointer;
+}
+.photo-controls input[type="range"] {
+  padding: 0;
+  width: 100%;
+}
+.photo-editor input[type="file"] {
+  width: 100%;
+  min-width: 0;
+}

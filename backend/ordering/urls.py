@@ -11,6 +11,7 @@ router.register("option-groups", v.OptionGroupViewSet)
 router.register("options", v.OptionViewSet)
 
 urlpatterns = [
+    path("api/web/menu-photos/<uuid:pk>/<str:variant>/", v.MenuPhotoView.as_view()),
     # Public QR ordering
     path("api/web/store/", v.StoreView.as_view()),
     path("api/web/tabs/", v.JoinTableView.as_view()),
