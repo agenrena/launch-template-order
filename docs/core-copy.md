@@ -13,3 +13,5 @@
 - mcp/src/core.ts 保留共同工具，server.ts 再註冊點餐工具；api.ts 的 OrderApi 繼承共用傳輸。
 
 維護官方模板時，先比較上游核心變更，再把適用修正整合到這些副本；不得直接覆蓋商家自己的客製版本。
+
+2026-10-02：同步軟體命名（core/branding.py、Business.software_name、console serializer、session 與共用 UI）；本模板 SOFTWARE_DEFAULT_NAME 為 `Order`。

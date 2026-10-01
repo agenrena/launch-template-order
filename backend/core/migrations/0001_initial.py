@@ -6,6 +6,7 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
+import core.branding
 import core.models
 
 
@@ -84,6 +85,10 @@ class Migration(migrations.Migration):
                     models.PositiveSmallIntegerField(
                         default=1, editable=False, primary_key=True, serialize=False
                     ),
+                ),
+                (
+                    "software_name",
+                    models.CharField(default=core.branding.initial_software_name, max_length=120),
                 ),
                 ("name", models.CharField(default="我的商家", max_length=120)),
                 ("about", models.TextField(blank=True, max_length=2000)),

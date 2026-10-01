@@ -88,6 +88,7 @@ class SessionView(APIView):
             {
                 "user": user,
                 "setup": user is None and setup_open(request),
+                "software_name": Business.current().software_name,
                 "csrf_token": get_token(request),
             }
         )
@@ -146,17 +147,19 @@ class PasswordView(APIView):
 class BusinessView(APIView):
     def get(self, request):
         authorize(human_actor(request.user), "business.read")
-        return Response(s.BusinessSerializer(Business.current()).data)
+        return Response(s.ConsoleBusinessSerializer(Business.current()).data)
 
     def patch(self, request):
         values = validated(
-            s.BusinessSerializer,
+            s.ConsoleBusinessSerializer,
             request.data,
             instance=Business.current(),
             partial=True,
         )
         return Response(
-            s.BusinessSerializer(services.update_business(human_actor(request.user), values)).data
+            s.ConsoleBusinessSerializer(
+                services.update_business(human_actor(request.user), values)
+            ).data
         )
 
 

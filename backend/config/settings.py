@@ -45,6 +45,8 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Hosted (Compose/Runtime): DATABASE_URL points at PostgreSQL.
 LOCAL_APP = os.getenv("LOCAL_APP", "false").lower() == "true"
 DATA_DIR = Path(os.getenv("DATA_DIR") or BASE_DIR.parent / "data")
+SOFTWARE_DEFAULT_NAME = "Order"
+SOFTWARE_CONFIG_FILE = BASE_DIR / "app-config.json"
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 MCP_ENTRY = BASE_DIR.parent / "mcp" / "dist" / "index.js"
 MCP_NAME = "order"  # server name in the mcpServers config shown to the Agent

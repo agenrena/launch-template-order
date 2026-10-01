@@ -47,6 +47,7 @@ export interface User {
   permissions: string[];
 }
 export interface Business {
+  software_name: string;
   name: string;
   about: string;
   address: string;

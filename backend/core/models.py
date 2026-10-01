@@ -15,6 +15,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from .branding import initial_software_name
+
 
 def valid_timezone(value):
     try:
@@ -35,6 +37,7 @@ class Business(models.Model):
     """The store. A chain runs one App per store."""
 
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    software_name = models.CharField(max_length=120, default=initial_software_name)
     name = models.CharField(max_length=120, default="我的商家")
     about = models.TextField(max_length=2000, blank=True)
     address = models.CharField(max_length=300, blank=True)

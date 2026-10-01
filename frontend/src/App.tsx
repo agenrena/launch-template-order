@@ -14,7 +14,15 @@ import { MenuAdmin } from "./ordering/MenuAdmin";
 import { Setup } from "./ordering/Setup";
 
 export function App() {
-  const session = useData<{ user: User | null; setup: boolean }>("session/");
+  const session = useData<{
+    user: User | null;
+    setup: boolean;
+    software_name: string;
+  }>("session/");
+  const softwareName = session.data?.software_name?.trim() || "Order";
+  useEffect(() => {
+    document.title = softwareName;
+  }, [softwareName]);
   if (session.isPending)
     return <main className="loading">正在載入工作空間…</main>;
   if (session.error)
@@ -26,14 +34,22 @@ export function App() {
       </main>
     );
   if (!session.data.user)
-    return <Entry setup={session.data.setup} done={() => session.refetch()} />;
-  return <Console user={session.data.user} />;
+    return (
+      <Entry
+        setup={session.data.setup}
+        done={() => session.refetch()}
+        softwareName={softwareName}
+      />
+    );
+  return <Console user={session.data.user} softwareName={softwareName} />;
 }
 function Entry({
   setup,
   done,
+  softwareName,
 }: {
   setup: boolean;
+  softwareName: string;
   done: () => Promise<unknown>;
 }) {
   const action = useAction();
@@ -49,9 +65,7 @@ function Entry({
   return (
     <div className="login-shell">
       <aside className="login-story">
-        <div className="wordmark">
-          agenrena<span>ORDER</span>
-        </div>
+        <div className="wordmark">{softwareName}</div>
         <div>
           <p className="eyebrow">YOUR BUSINESS, YOUR WAY</p>
           <h1>
@@ -65,7 +79,7 @@ function Entry({
             管理商家資料與團隊，讓服務從這裡展開。
           </p>
         </div>
-        <small>ONE STORE · ONE APP</small>
+        <small>Powered by Agenrena</small>
       </aside>
       <main className="login">
         {setup ? (
@@ -142,7 +156,7 @@ function Entry({
     </div>
   );
 }
-function Console({ user }: { user: User }) {
+function Console({ user, softwareName }: { user: User; softwareName: string }) {
   const [tab, setTab] = useState("orders"),
     business = useData<Business>("business/"),
     action = useAction();
@@ -168,9 +182,7 @@ function Console({ user }: { user: User }) {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="wordmark">
-          agenrena<span>ORDER</span>
-        </div>
+        <div className="wordmark">{softwareName}</div>
         <div className="workspace">
           <span className="tile">{(business.data?.name || "商")[0]}</span>
           <div>
@@ -243,9 +255,7 @@ function Console({ user }: { user: User }) {
             <Setup />
           ) : null}
         </main>
-        <footer>
-          Agenrena Order <span>一間店，一套點餐系統。</span>
-        </footer>
+        <footer>Powered by Agenrena</footer>
       </div>
     </div>
   );

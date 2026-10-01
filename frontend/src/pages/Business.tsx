@@ -29,6 +29,18 @@ export function BusinessPage({
             })
           }
         >
+          <Field label="軟體名稱">
+            <input
+              name="software_name"
+              defaultValue={business.software_name}
+              maxLength={120}
+              required
+              onChange={() => setSaved(false)}
+            />
+          </Field>
+          <p className="muted">
+            顯示在登入頁、後台左上角與瀏覽器分頁；可以和商家名稱不同。
+          </p>
           <Field label="商家名稱">
             <input
               name="name"

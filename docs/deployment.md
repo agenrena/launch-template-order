@@ -36,4 +36,4 @@ App 只連出到 `AGENRENA_BASE_URL`；Agenrena 不回呼 App，不需要對外�
 
 ## 發布到模板目錄
 
-在 GitHub 發正式 release（例如 `v0.1.0`；草稿與 prerelease 不發布）。`.github/workflows/release.yml` 先跑完 `check.yml` 的全部檢查，再以 `scripts/publish_template.py` 從該 commit 打包並上傳到 S3 的模板目錄（`catalog.json` 依模板 id 合併，不會蓋掉其他模板）。ZIP root 為此專案根目錄，不含 .env、node_modules、建置結果、.venv、Git、.github、`data/`、資料庫或密鑰檔；檔案權限照 Git 記錄，所以 `start.command` 保持可執行。需要 repo 的 `template-publish` environment 設定 `LAUNCH_TEMPLATE_BUCKET`、`AWS_TEMPLATE_PUBLISH_ROLE_ARN`，且 AWS 角色信任這個 repo。
+在 GitHub 發正式 release（例如 `v0.1.0`；草稿與 prerelease 不發布）。`.github/workflows/release.yml` 先跑完 `check.yml` 的全部檢查，再以 `scripts/publish_template.py` 從該 commit 打包並上傳到 S3 的模板目錄（`catalog.json` 依模板 id 合併，不會蓋掉其他模板）。ZIP root 為此專案根目錄，不含 .env、node_modules、建置結果、.venv、Git、.github、`data/`、資料庫或密鑰檔；檔案權限照 Git 記錄，所以 `start.command` 保持可執行。需要 repo 的 `template-publish` environment 設定 `LAUNCH_TEMPLATE_BUCKET`、`AWS_TEMPLATE_PUBLISH_ROLE_ARN`（可選 `TEMPLATE_REGION`，預設 `us-east-1`，須與 bucket 所在 region 相同），且 AWS 角色信任這個 repo。發布前 bucket 需已有 `catalog.json`（新 bucket 先放入 `[]`）。

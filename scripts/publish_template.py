@@ -209,7 +209,7 @@ def main():
     upload.add_argument('--artifact-dir', type=Path, default=Path('release-dist'))
     upload.add_argument('--bucket', required=True)
     upload.add_argument('--catalog-key', default='catalog.json')
-    upload.add_argument('--region', default='ap-northeast-1')
+    upload.add_argument('--region', default='us-east-1')
     args = parser.parse_args()
     try:
         if args.command == 'pack':

@@ -24,3 +24,6 @@ release-dist/
 *service-account*.json
 *serviceAccount*.json
 *-firebase-adminsdk-*.json
+
+# Per-download initial software name (not a template default)
+backend/app-config.json

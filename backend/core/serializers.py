@@ -22,6 +22,11 @@ class BusinessSerializer(serializers.ModelSerializer):
         fields = ["name", "about", "address", "phone", "timezone"]
 
 
+class ConsoleBusinessSerializer(BusinessSerializer):
+    class Meta(BusinessSerializer.Meta):
+        fields = ["software_name", *BusinessSerializer.Meta.fields]
+
+
 class LoginInput(StrictInput):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(max_length=1024, trim_whitespace=False)

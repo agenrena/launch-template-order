@@ -378,6 +378,7 @@ dialog::backdrop {
   border-right: 1px solid var(--border);
 }
 .wordmark {
+  overflow-wrap: anywhere;
   padding: 0.15rem 0.5rem;
   font-size: 1.05rem;
   font-weight: 700;

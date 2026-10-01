@@ -23,6 +23,7 @@ jobs:
       id-token: write
     env:
       TEMPLATE_BUCKET: ${{ vars.LAUNCH_TEMPLATE_BUCKET }}
+      TEMPLATE_REGION: ${{ vars.TEMPLATE_REGION || 'us-east-1' }}
       CATALOG_KEY: catalog.json
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -47,5 +48,5 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_TEMPLATE_PUBLISH_ROLE_ARN }}
           role-session-name: order-template-publish
-          aws-region: ap-northeast-1
-      - run: python scripts/publish_template.py publish --bucket "$TEMPLATE_BUCKET" --catalog-key "$CATALOG_KEY"
+          aws-region: ${{ env.TEMPLATE_REGION }}
+      - run: python scripts/publish_template.py publish --bucket "$TEMPLATE_BUCKET" --catalog-key "$CATALOG_KEY" --region "$TEMPLATE_REGION"
